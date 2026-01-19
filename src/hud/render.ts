@@ -7,7 +7,7 @@
 import type { HudRenderContext, HudConfig } from './types.js';
 import { bold, dim } from './colors.js';
 import { renderRalph } from './elements/ralph.js';
-import { renderAgents } from './elements/agents.js';
+import { renderAgentsByFormat } from './elements/agents.js';
 import { renderTodos } from './elements/todos.js';
 import { renderSkills } from './elements/skills.js';
 import { renderContext } from './elements/context.js';
@@ -52,7 +52,10 @@ export function render(context: HudRenderContext, config: HudConfig): string {
 
   // Active agents
   if (enabledElements.agents) {
-    const agents = renderAgents(context.activeAgents);
+    const agents = renderAgentsByFormat(
+      context.activeAgents,
+      enabledElements.agentsFormat || 'codes'
+    );
     if (agents) elements.push(agents);
   }
 

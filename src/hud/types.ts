@@ -139,6 +139,15 @@ export interface HudRenderContext {
 
 export type HudPreset = 'minimal' | 'focused' | 'full';
 
+/**
+ * Agent display format options:
+ * - count: agents:2
+ * - codes: agents:Oes (type-coded with model tier casing)
+ * - codes-duration: agents:O(2m)es (codes with duration)
+ * - detailed: agents:[oracle(2m),explore,sj]
+ */
+export type AgentsFormat = 'count' | 'codes' | 'codes-duration' | 'detailed';
+
 export interface HudElementConfig {
   sisyphusLabel: boolean;
   ralph: boolean;
@@ -146,6 +155,7 @@ export interface HudElementConfig {
   activeSkills: boolean;
   contextBar: boolean;
   agents: boolean;
+  agentsFormat: AgentsFormat;
   backgroundTasks: boolean;
   todos: boolean;
 }
@@ -174,6 +184,7 @@ export const DEFAULT_HUD_CONFIG: HudConfig = {
     activeSkills: true,
     contextBar: true,
     agents: true,
+    agentsFormat: 'codes',
     backgroundTasks: true,
     todos: true,
   },
@@ -192,6 +203,7 @@ export const PRESET_CONFIGS: Record<HudPreset, Partial<HudElementConfig>> = {
     activeSkills: true,
     contextBar: false,
     agents: false,
+    agentsFormat: 'count',
     backgroundTasks: false,
     todos: true,
   },
@@ -202,6 +214,7 @@ export const PRESET_CONFIGS: Record<HudPreset, Partial<HudElementConfig>> = {
     activeSkills: true,
     contextBar: true,
     agents: true,
+    agentsFormat: 'codes',
     backgroundTasks: true,
     todos: true,
   },
@@ -212,6 +225,7 @@ export const PRESET_CONFIGS: Record<HudPreset, Partial<HudElementConfig>> = {
     activeSkills: true,
     contextBar: true,
     agents: true,
+    agentsFormat: 'codes-duration',
     backgroundTasks: true,
     todos: true,
   },

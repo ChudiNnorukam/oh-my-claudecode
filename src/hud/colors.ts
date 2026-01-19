@@ -109,6 +109,38 @@ export function getTodoColor(completed: number, total: number): string {
 }
 
 // ============================================================================
+// Model Tier Colors (for agent visualization)
+// ============================================================================
+
+/**
+ * Get color for model tier.
+ * - Opus: Magenta (high-powered)
+ * - Sonnet: Yellow (standard)
+ * - Haiku: Green (lightweight)
+ */
+export function getModelTierColor(model: string | undefined): string {
+  if (!model) return CYAN; // Default/unknown
+  const tier = model.toLowerCase();
+  if (tier.includes('opus')) return MAGENTA;
+  if (tier.includes('sonnet')) return YELLOW;
+  if (tier.includes('haiku')) return GREEN;
+  return CYAN; // Unknown model
+}
+
+/**
+ * Get color for agent duration (warning/alert).
+ * - <2min: normal (green)
+ * - 2-5min: warning (yellow)
+ * - >5min: alert (red)
+ */
+export function getDurationColor(durationMs: number): string {
+  const minutes = durationMs / 60000;
+  if (minutes >= 5) return RED;
+  if (minutes >= 2) return YELLOW;
+  return GREEN;
+}
+
+// ============================================================================
 // Progress Bars
 // ============================================================================
 
