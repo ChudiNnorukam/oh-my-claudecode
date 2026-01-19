@@ -12,11 +12,38 @@ Configure the Sisyphus HUD (Heads-Up Display) for the statusline.
 
 | Command | Description |
 |---------|-------------|
-| `/hud` | Show current HUD status |
+| `/hud` | Show current HUD status (auto-setup if needed) |
+| `/hud setup` | Install/repair HUD statusline |
 | `/hud minimal` | Switch to minimal display |
 | `/hud focused` | Switch to focused display (default) |
 | `/hud full` | Switch to full display |
 | `/hud status` | Show detailed HUD status |
+
+## Auto-Setup
+
+When you run `/hud` or `/hud setup`, the system will automatically:
+1. Check if `~/.claude/hud/sisyphus-hud.mjs` exists
+2. Check if `statusLine` is configured in `~/.claude/settings.json`
+3. If missing, create the HUD wrapper script and configure settings
+4. Report status and prompt to restart Claude Code if changes were made
+
+**IMPORTANT**: If the argument is `setup` OR if the HUD script doesn't exist at `~/.claude/hud/sisyphus-hud.mjs`, you MUST run the setup by:
+1. First check if the files exist using Bash: `ls ~/.claude/hud/sisyphus-hud.mjs 2>/dev/null && echo EXISTS || echo MISSING`
+2. If MISSING or argument is `setup`, find the plugin path and run: `node <plugin-path>/scripts/plugin-setup.mjs`
+3. The plugin path can be found at: `~/.claude/plugins/cache/oh-my-claude-sisyphus/oh-my-claude-sisyphus/<version>/` or the local dev path
+
+To find and run setup automatically:
+```bash
+# Try plugin cache first, then dev paths
+PLUGIN_SETUP=$(find ~/.claude/plugins/cache/oh-my-claude-sisyphus -name "plugin-setup.mjs" 2>/dev/null | head -1)
+if [ -z "$PLUGIN_SETUP" ]; then
+  # Try common dev paths
+  for p in ~/Workspace/oh-my-claude-sisyphus ~/workspace/oh-my-claude-sisyphus ~/projects/oh-my-claude-sisyphus; do
+    if [ -f "$p/scripts/plugin-setup.mjs" ]; then PLUGIN_SETUP="$p/scripts/plugin-setup.mjs"; break; fi
+  done
+fi
+if [ -n "$PLUGIN_SETUP" ]; then node "$PLUGIN_SETUP"; else echo "Could not find plugin-setup.mjs"; fi
+```
 
 ## Display Presets
 
@@ -100,9 +127,13 @@ You can manually edit the config file:
 ## Troubleshooting
 
 If the HUD is not showing:
-1. Check settings.json has statusLine configured
-2. Run `/doctor` to check installation
-3. Verify HUD script exists at `~/.claude/hud/sisyphus-hud.js`
+1. Run `/hud setup` to auto-install and configure
+2. Restart Claude Code after setup completes
+3. If still not working, run `/doctor` for full diagnostics
+
+Manual verification:
+- HUD script: `~/.claude/hud/sisyphus-hud.mjs`
+- Settings: `~/.claude/settings.json` should have `statusLine` configured
 
 ---
 
