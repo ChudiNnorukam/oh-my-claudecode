@@ -2,9 +2,9 @@
 
 ![oh-my-claude-sisyphus](https://raw.githubusercontent.com/Yeachan-Heo/oh-my-claude-sisyphus-website/main/social-preview.png)
 
-# 🚀 v2.5.0 - Claude Code Native Multi-Agent Orchestration
+# 🚀 v2.6.0 - Claude Code Native Multi-Agent Orchestration
 
-[![Version](https://img.shields.io/badge/version-2.5.0-ff6b6b)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus/releases)
+[![Version](https://img.shields.io/badge/version-2.6.0-ff6b6b)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus/releases)
 [![npm version](https://img.shields.io/npm/v/oh-my-claude-sisyphus?color=cb3837)](https://www.npmjs.com/package/oh-my-claude-sisyphus)
 [![Downloads](https://img.shields.io/npm/dt/oh-my-claude-sisyphus?color=00d4aa)](https://www.npmjs.com/package/oh-my-claude-sisyphus)
 [![GitHub stars](https://img.shields.io/github/stars/Yeachan-Heo/oh-my-claude-sisyphus?style=flat&color=ffd700)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus/stargazers)
@@ -19,8 +19,8 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus/pulls)
 
 [![Agents](https://img.shields.io/badge/Agents-19-ff0040)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus)
-[![Skills](https://img.shields.io/badge/Skills-8-ff6600)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus)
-[![Hooks](https://img.shields.io/badge/Hooks-18-0088ff)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus)
+[![Skills](https://img.shields.io/badge/Skills-21-ff6600)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus)
+[![Hooks](https://img.shields.io/badge/Hooks-19-0088ff)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus)
 [![Days Since Ban](https://img.shields.io/badge/Days%20Since%20Ban-0-00ffff)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus)
 [![Resurrections](https://img.shields.io/badge/Resurrections-∞-ff00ff)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus)
 
@@ -34,20 +34,52 @@
 
 ---
 
-## ⚡ NEW in 2.0: Intelligent Model Routing
+## ⚡ NEW in 2.6: Compaction-Resilient Memory & Structured Task Tracking
 
-**Revolutionary change:** The orchestrator now analyzes task complexity and routes to the optimal model tier.
+**Game-changing release:** Claude never forgets critical project knowledge, even through context compaction.
 
-| Task Type | Model | Why |
-|-----------|-------|-----|
-| "Where is auth?" | **Haiku** | Simple lookup - fast & cheap |
-| "Add validation" | **Sonnet** | Module work - balanced |
-| "Debug race condition" | **Opus** | Complex - needs deep reasoning |
+### 🧠 Three-Tier Memory System
 
-**All agents are now adaptive** (except orchestrators which need Opus to analyze and delegate).
+**The Problem:** Long sessions lose context through compaction. Critical discoveries vanish.
 
+**The Solution:** Persistent notepad system that survives compaction:
+
+| Tier | Purpose | Retention |
+|------|---------|-----------|
+| **Priority Context** | Critical discoveries (API URLs, key files) | Always loaded on session start |
+| **Working Memory** | Session notes with timestamps | Auto-pruned after 7 days |
+| **MANUAL** | User permanent notes | Never pruned |
+
+```bash
+# Agents can persist discoveries automatically
+<remember>Project uses pnpm not npm</remember>
+<remember priority>API client at src/api/client.ts</remember>
+
+# Or save notes manually
+/note Database schema uses PostgreSQL with Prisma ORM
 ```
-Orchestrator (Opus) → Analyzes complexity → Routes to Haiku/Sonnet/Opus
+
+### 📋 Ralph Loop PRD Support
+
+**Structured task tracking** inspired by [Ralph](https://github.com/snarktank/ralph):
+
+- **Product Requirements Document (PRD)** format with user stories
+- **Progress tracking** with learnings and patterns
+- **Completion guarantee** - loop continues until ALL stories pass
+- **Three powerful modes:**
+  - `/ralph-loop` - Self-referential loop until completion
+  - `/ultrawork-ralph` - Maximum intensity + completion guarantee
+  - `/ultraqa` - Autonomous test-verify-fix cycles
+
+```bash
+# Initialize a structured task
+/ralph-init implement user authentication with OAuth
+
+# Maximum intensity with completion guarantee
+/ultrawork-ralph refactor the entire API layer
+
+# Autonomous QA cycling
+/ultraqa all tests must pass with 90%+ coverage
 ```
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
@@ -254,15 +286,19 @@ claude
 | `/sisyphus-default` | Configure Sisyphus for current project (./.claude/CLAUDE.md) |
 | `/sisyphus-default-global` | Configure Sisyphus globally (~/.claude/CLAUDE.md) |
 | `/ultrawork <task>` | Maximum performance mode with parallel agents |
+| `/ralph-init <task>` | Initialize PRD (Product Requirements Document) for structured task tracking |
+| `/ralph-loop <task>` | Self-referential loop until task completion |
+| `/ultrawork-ralph <task>` | Maximum intensity + completion guarantee (ultrawork + ralph loop) |
+| `/ultraqa <goal>` | Autonomous QA cycling workflow (test → verify → fix → repeat) |
+| `/cancel-ralph` | Cancel active Ralph Loop (and ultrawork-ralph if active) |
+| `/cancel-ultraqa` | Cancel active UltraQA cycling workflow |
+| `/note <content>` | Save notes to notepad.md for compaction resilience |
 | `/deepsearch <query>` | Thorough multi-strategy codebase search |
 | `/deepinit [path]` | Index codebase with hierarchical AGENTS.md files |
 | `/analyze <target>` | Deep analysis and investigation |
 | `/plan <description>` | Start planning session with Prometheus |
 | `/review [plan-path]` | Review a plan with Momus |
 | `/prometheus <task>` | Strategic planning with interview workflow |
-| `/orchestrator <task>` | Complex multi-step task coordination |
-| `/ralph-loop <task>` | Self-referential loop until task completion |
-| `/cancel-ralph` | Cancel active Ralph Loop |
 | `/doctor` | Diagnose and fix installation issues |
 
 ### Examples
@@ -281,6 +317,18 @@ claude
 
 # Use ultrawork for maximum performance
 /ultrawork implement user dashboard with charts
+
+# Initialize structured task with PRD
+/ralph-init implement user authentication with OAuth
+
+# Maximum intensity with completion guarantee
+/ultrawork-ralph migrate database schema to PostgreSQL
+
+# Autonomous QA cycling
+/ultraqa all tests must pass with 90%+ coverage
+
+# Save important discoveries
+/note Project uses Bun runtime instead of Node.js
 
 # Deep search
 /deepsearch API endpoints that handle user data
@@ -325,7 +373,7 @@ To manually update, re-run the plugin install command or use Claude Code's built
 
 ## Hooks System
 
-Oh-my-claude-sisyphus includes 18 lifecycle hooks that enhance Claude Code's behavior:
+Oh-my-claude-sisyphus includes 19 lifecycle hooks that enhance Claude Code's behavior:
 
 ### Core Hooks
 
@@ -337,6 +385,7 @@ Oh-my-claude-sisyphus includes 18 lifecycle hooks that enhance Claude Code's beh
 | **keyword-detector** | Magic keyword detection (ultrawork, search, analyze) |
 | **ralph-loop** | Self-referential development loop management |
 | **todo-continuation** | Ensures todo list completion |
+| **notepad** | Compaction-resilient memory system with three-tier storage |
 
 ### Context & Recovery
 
@@ -355,6 +404,7 @@ Oh-my-claude-sisyphus includes 18 lifecycle hooks that enhance Claude Code's beh
 | **thinking-block-validator** | Extended thinking validation |
 | **empty-message-sanitizer** | Empty message handling |
 | **edit-error-recovery** | Automatic recovery from edit errors |
+| **post-tool-use** | Remember tag auto-capture to notepad system |
 
 ### Environment & Notifications
 
@@ -368,18 +418,40 @@ Oh-my-claude-sisyphus includes 18 lifecycle hooks that enhance Claude Code's beh
 
 ## Builtin Skills
 
-Eight builtin skills provide specialized capabilities:
+21 builtin skills provide specialized capabilities:
 
+### Core Skills
 | Skill | Description |
 |-------|-------------|
 | **sisyphus** | Multi-agent orchestration mode |
-| **orchestrator** | Master coordinator for complex tasks |
 | **ultrawork** | Maximum performance with parallel agents |
-| **deepinit** | Hierarchical AGENTS.md codebase documentation |
 | **ralph-loop** | Self-referential development until completion |
+| **ralph-init** | Initialize PRD for structured task tracking |
+| **ultrawork-ralph** | Maximum intensity + completion guarantee |
+| **ultraqa** | Autonomous QA cycling workflow |
+| **prometheus** | Strategic planning with interview workflow |
+| **plan** | Start planning session |
+| **review** | Review work plans with Momus |
+
+### Enhancement Skills
+| Skill | Description |
+|-------|-------------|
+| **deepinit** | Hierarchical AGENTS.md codebase documentation |
+| **deepsearch** | Thorough multi-strategy codebase search |
+| **analyze** | Deep analysis and investigation |
 | **frontend-ui-ux** | Designer-turned-developer UI/UX expertise |
 | **git-master** | Git expert for atomic commits and history |
+
+### Utility Skills
+| Skill | Description |
+|-------|-------------|
+| **note** | Save notes to compaction-resilient notepad |
+| **cancel-ralph** | Cancel Ralph Loop or ultrawork-ralph |
+| **cancel-ultraqa** | Cancel UltraQA cycling workflow |
+| **sisyphus-default** | Configure Sisyphus for current project |
+| **sisyphus-default-global** | Configure Sisyphus globally |
 | **doctor** | Diagnose and fix installation issues |
+| **release** | Automated release workflow |
 
 Skills are automatically activated via slash commands or magic keywords.
 
@@ -662,11 +734,15 @@ The original oh-my-opencode used multiple AI providers. This project uses Claude
 
 | Feature | Description |
 |---------|-------------|
-| **12 Specialized Agents** | Oracle, Librarian, Explore, Frontend Engineer, Document Writer, Multimodal Looker, QA Tester, Momus, Metis, Orchestrator-Sisyphus, Sisyphus-Junior, Prometheus |
-| **18 Lifecycle Hooks** | rules-injector, sisyphus-orchestrator, auto-slash-command, keyword-detector, ralph-loop, todo-continuation, context-window-limit-recovery, preemptive-compaction, session-recovery, directory-readme-injector, comment-checker, thinking-block-validator, empty-message-sanitizer, edit-error-recovery, non-interactive-env, agent-usage-reminder, background-notification, think-mode |
-| **7 Builtin Skills** | sisyphus, orchestrator, ultrawork, deepinit, ralph-loop, frontend-ui-ux, git-master |
+| **19 Specialized Agents** | Oracle, Librarian, Explore, Frontend Engineer, Document Writer, Multimodal Looker, QA Tester, Momus, Metis, Orchestrator-Sisyphus, Sisyphus-Junior, Prometheus (+ tiered variants) |
+| **19 Lifecycle Hooks** | rules-injector, sisyphus-orchestrator, auto-slash-command, keyword-detector, ralph-loop, todo-continuation, notepad, post-tool-use, context-window-limit-recovery, preemptive-compaction, session-recovery, directory-readme-injector, comment-checker, thinking-block-validator, empty-message-sanitizer, edit-error-recovery, non-interactive-env, agent-usage-reminder, background-notification |
+| **21 Builtin Skills** | sisyphus, ultrawork, ralph-loop, ralph-init, ultrawork-ralph, ultraqa, prometheus, plan, review, deepinit, deepsearch, analyze, frontend-ui-ux, git-master, note, cancel-ralph, cancel-ultraqa, sisyphus-default, sisyphus-default-global, doctor, release |
 | **Magic Keywords** | `ultrawork`, `search`, `analyze`, `ultrathink` trigger enhanced modes |
-| **Slash Commands** | `/sisyphus`, `/sisyphus-default`, `/ultrawork`, `/deepsearch`, `/deepinit`, `/analyze`, `/plan`, `/review`, `/prometheus`, `/orchestrator`, `/ralph-loop`, `/cancel-ralph` |
+| **Slash Commands** | `/sisyphus`, `/sisyphus-default`, `/sisyphus-default-global`, `/ultrawork`, `/ralph-init`, `/ralph-loop`, `/ultrawork-ralph`, `/ultraqa`, `/cancel-ralph`, `/cancel-ultraqa`, `/note`, `/deepsearch`, `/deepinit`, `/analyze`, `/plan`, `/review`, `/prometheus`, `/doctor` |
+| **Compaction-Resilient Memory** | Three-tier notepad system (Priority Context, Working Memory, MANUAL) |
+| **Remember Tag Auto-Capture** | Agents can persist discoveries with `<remember>` tags |
+| **PRD Support** | Structured task tracking with user stories and acceptance criteria |
+| **Progress Tracking** | Append-only progress log with learnings and patterns |
 | **Auto-Update System** | Updates via Claude Code's plugin system |
 | **Configuration System** | JSONC config with multi-source merging |
 | **Context Injection** | Auto-loads CLAUDE.md and AGENTS.md files |
@@ -677,6 +753,7 @@ The original oh-my-opencode used multiple AI providers. This project uses Claude
 | **MCP Server Configs** | Exa, Context7, grep.app server definitions |
 | **LSP Tools** | Real LSP server integration with 11 tools |
 | **AST Tools** | ast-grep integration for structural code search/replace |
+| **Comprehensive Test Suite** | 358 tests covering all major features |
 
 #### Not Implemented ❌
 
