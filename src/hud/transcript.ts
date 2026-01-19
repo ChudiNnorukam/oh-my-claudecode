@@ -106,11 +106,26 @@ function processEntry(
     }
 
     // Track tool_result to mark agents as completed
+    // BUT: Background agents return tool_result immediately with "Async agent launched"
+    // These should NOT be marked as completed - they're still running
     if (block.type === 'tool_result' && block.tool_use_id) {
       const agent = agentMap.get(block.tool_use_id);
       if (agent) {
-        agent.status = 'completed';
-        agent.endTime = timestamp;
+        // Check if this is a background agent launch result (not actual completion)
+        const content = block.content;
+        const isBackgroundLaunch =
+          typeof content === 'string'
+            ? content.includes('Async agent launched')
+            : Array.isArray(content) && content.some(
+                (c: { type?: string; text?: string }) =>
+                  c.type === 'text' && c.text?.includes('Async agent launched')
+              );
+
+        if (!isBackgroundLaunch) {
+          agent.status = 'completed';
+          agent.endTime = timestamp;
+        }
+        // If it's a background launch, keep status as 'running'
       }
     }
   }
@@ -134,6 +149,7 @@ interface ContentBlock {
   input?: unknown;
   tool_use_id?: string;
   is_error?: boolean;
+  content?: string | Array<{ type?: string; text?: string }>;
 }
 
 interface TaskInput {
