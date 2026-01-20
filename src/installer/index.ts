@@ -40,7 +40,7 @@ export const SETTINGS_FILE = join(CLAUDE_CONFIG_DIR, 'settings.json');
 export const VERSION_FILE = join(CLAUDE_CONFIG_DIR, '.sisyphus-version.json');
 
 /** Current version */
-export const VERSION = '2.6.0';
+export const VERSION = '3.0.0-beta';
 
 /** Installation result */
 export interface InstallResult {
@@ -2624,6 +2624,7 @@ If the HUD is not showing:
 /**
  * CLAUDE.md content for Sisyphus system
  * ENHANCED: Intelligent skill composition based on task type
+ * SYNCED: Should match docs/CLAUDE.md - run /sisyphus-default to update user's copy
  */
 export const CLAUDE_MD_CONTENT = `# Sisyphus Multi-Agent System
 
@@ -2667,6 +2668,7 @@ Stack these on top of default behavior when needed:
 | Skill | What It Adds | When to Use |
 |-------|--------------|-------------|
 | \`/ultrawork\` | Maximum intensity, parallel everything, don't wait | Speed critical, large tasks |
+| \`/deepinit\` | Hierarchical AGENTS.md generation, codebase indexing | New projects, documentation |
 | \`/git-master\` | Atomic commits, style detection, history expertise | Multi-file changes |
 | \`/frontend-ui-ux\` | Bold aesthetics, design sensibility | UI/component work |
 | \`/ralph-loop\` | Cannot stop until verified complete | Must-finish tasks |
@@ -2684,10 +2686,68 @@ Automatically activate skills based on task signals:
 | "ultrawork" / "maximum speed" / "parallel" | + ultrawork |
 | Multi-file git changes | + git-master |
 | "plan this" / strategic discussion | prometheus |
+| "index codebase" / "create AGENTS.md" / "document structure" | deepinit |
+| **BROAD REQUEST**: unbounded scope, vague verbs, no specific files | **prometheus (with context brokering)** |
+
+### Broad Request Detection Heuristic
+
+A request is **BROAD** and needs planning if ANY of:
+- Uses scope-less verbs: "improve", "enhance", "fix", "refactor", "add", "implement" without specific targets
+- No specific file or function mentioned
+- Touches multiple unrelated areas (3+ components)
+- Single sentence without clear deliverable
+- You cannot immediately identify which files to modify
+
+**When BROAD REQUEST detected:**
+1. First invoke \`oh-my-claude-sisyphus:explore\` to understand relevant codebase areas
+2. Optionally invoke \`oh-my-claude-sisyphus:oracle\` for architectural guidance
+3. THEN invoke \`oh-my-claude-sisyphus:prometheus\` **with gathered context**
+4. Prometheus asks ONLY user-preference questions (not codebase questions)
 
 ## THE BOULDER NEVER STOPS
 
 Like Sisyphus condemned to roll his boulder eternally, you are BOUND to your task list. You do not stop. You do not quit. The boulder rolls until it reaches the top - until EVERY task is COMPLETE.
+
+## Context Persistence (Compaction Resilience)
+
+To survive conversation compaction (when context gets summarized), use \`<remember>\` tags to capture important discoveries:
+
+### Remember Tags
+
+| Tag | Destination | Lifetime | When to Use |
+|-----|-------------|----------|-------------|
+| \`<remember>info</remember>\` | Working Memory | 7 days | Session-specific context |
+| \`<remember priority>info</remember>\` | Priority Context | Permanent | Critical patterns/facts |
+
+### What to Remember
+
+**DO capture:**
+- Architecture decisions discovered by Oracle ("Project uses repository pattern")
+- Error resolutions that may recur ("Fixed by clearing .next cache")
+- User preferences explicitly stated ("User prefers small atomic commits")
+- Critical file paths for this task ("Main config at src/config/app.ts")
+
+**DON'T capture:**
+- General progress updates (use todos instead)
+- Temporary debugging state
+- Information already in AGENTS.md files
+- Secrets, tokens, or credentials
+
+### Example Usage
+
+\`\`\`
+<remember>This project uses pnpm, not npm - run pnpm install</remember>
+
+<remember priority>API endpoints all go through src/api/client.ts with centralized error handling</remember>
+\`\`\`
+
+### Automatic Injection
+
+Priority Context is automatically injected on session start. Working Memory is injected when recent (within 24 hours).
+
+### Manual Fallback
+
+Use \`/note <content>\` command for explicit note-taking if \`<remember>\` tags aren't processed.
 
 ## Available Subagents
 
@@ -2736,8 +2796,109 @@ All agent names require the \`oh-my-claude-sisyphus:\` prefix when calling via T
 | \`/plan <description>\` | Start planning session with Prometheus |
 | \`/review [plan-path]\` | Review a plan with Momus |
 | \`/prometheus <task>\` | Strategic planning with interview workflow |
-| \`/ralph-loop <task>\` | Self-referential loop until task completion |
+| \`/ralph-loop <task>\` | Self-referential loop with PRD-based task tracking |
+| \`/ralph-init <task>\` | Initialize PRD for structured ralph-loop execution |
 | \`/cancel-ralph\` | Cancel active Ralph Loop |
+| \`/mnemosyne\` | Extract reusable skill from current problem-solving session |
+| \`/hud [preset]\` | Configure HUD statusline display (minimal/focused/full) |
+| \`/hud setup\` | Auto-install HUD statusline |
+| \`/note <content>\` | Save notes to notepad for compaction resilience |
+
+## Mnemosyne - Learned Skills System
+
+Extract reusable skills from problem-solving sessions. Named after the Greek goddess of memory.
+
+### When to Use
+
+- After solving a tricky bug through investigation
+- When discovering a non-obvious workaround
+- When learning a project-specific pattern
+- When finding a technique worth remembering
+
+### Quality Gates
+
+- Problem clearly stated (min 10 chars)
+- Solution is actionable (min 20 chars)
+- Triggers are specific 3-5 keywords (avoid generic words)
+- No duplicate with similar triggers
+
+### Storage
+
+- User-level: \`~/.claude/skills/sisyphus-learned/\` (portable across projects)
+- Project-level: \`.sisyphus/skills/\` (version-controllable with repo)
+
+Skills are automatically injected when trigger keywords are detected in user messages.
+
+## Sisyphus HUD Statusline
+
+Real-time visualization of orchestration state in the Claude Code status bar.
+
+### Display Presets
+
+- **minimal**: \`[SISYPHUS] ralph | ultrawork | todos:2/5\`
+- **focused** (default): \`[SISYPHUS] ralph:3/10 | US-002 | ultrawork skill:prometheus | ctx:67% | agents:2 | bg:3/5 | todos:2/5\`
+- **full**: Multi-line with agent tree visualization
+
+### Setup
+
+Run \`/hud setup\` to auto-install statusline to \`~/.claude/hud/sisyphus-hud.mjs\`
+
+### Configuration
+
+HUD config stored at: \`~/.claude/.sisyphus/hud-config.json\`
+
+## Ralph Loop with PRD Support
+
+Ralph Loop now uses structured PRD (Product Requirements Document) for task tracking.
+
+### How It Works
+
+\`\`\`
+/ralph-loop <task>
+    ↓
+Check for prd.json
+    ↓
+[Not Found] → Auto-create PRD with user stories
+    ↓
+[Found] → Read PRD and progress.txt
+    ↓
+Work on highest-priority incomplete story
+    ↓
+Mark story passes: true when done
+    ↓
+Repeat until all stories complete
+    ↓
+<promise>DONE</promise>
+\`\`\`
+
+### Key Principles
+
+- **One story at a time** - Focus, don't scatter
+- **Right-sized stories** - Completable in one session
+- **Quality gates** - Tests must pass before marking done
+- **Memory** - Capture learnings in progress.txt for future iterations
+
+## AGENTS.md System
+
+The \`/deepinit\` command creates hierarchical documentation for AI agents to understand your codebase.
+
+### What It Creates
+
+\`\`\`
+/AGENTS.md                          ← Root documentation
+├── src/AGENTS.md                   ← Source code docs
+│   ├── src/components/AGENTS.md    ← Component docs
+│   └── src/utils/AGENTS.md         ← Utility docs
+└── tests/AGENTS.md                 ← Test docs
+\`\`\`
+
+### Usage
+
+\`\`\`bash
+/deepinit              # Index current directory
+/deepinit ./src        # Index specific path
+/deepinit --update     # Update existing AGENTS.md files
+\`\`\`
 
 ## Planning Workflow
 
@@ -2746,6 +2907,18 @@ All agent names require the \`oh-my-claude-sisyphus:\` prefix when calling via T
 3. Say "Create the plan" when ready
 4. Use \`/review\` to have Momus evaluate the plan
 5. Start implementation (default mode handles execution)
+
+## Prometheus Context Brokering
+
+When invoking Prometheus for planning, **ALWAYS** gather codebase context first to avoid burdening the user with codebase-answerable questions:
+
+### Pre-Gathering Phase
+
+1. **Invoke explore agent** to gather codebase context
+2. **Optionally invoke oracle** for architectural overview (if complex)
+3. Pass pre-gathered context TO Prometheus so it doesn't ask codebase questions
+
+**This dramatically improves planning UX** by ensuring the user is only asked questions that require human judgment.
 
 ## Orchestration Principles
 

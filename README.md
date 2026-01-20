@@ -2,9 +2,9 @@
 
 ![oh-my-claude-sisyphus](https://raw.githubusercontent.com/Yeachan-Heo/oh-my-claude-sisyphus-website/main/social-preview.png)
 
-# 🚀 v2.6.0 - Claude Code Native Multi-Agent Orchestration
+# 🚀 v3.0.0-beta - Claude Code Native Multi-Agent Orchestration
 
-[![Version](https://img.shields.io/badge/version-2.6.0-ff6b6b)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus/releases)
+[![Version](https://img.shields.io/badge/version-3.0.0--beta-ff6b6b)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus/releases)
 [![npm version](https://img.shields.io/npm/v/oh-my-claude-sisyphus?color=cb3837)](https://www.npmjs.com/package/oh-my-claude-sisyphus)
 [![Downloads](https://img.shields.io/npm/dt/oh-my-claude-sisyphus?color=00d4aa)](https://www.npmjs.com/package/oh-my-claude-sisyphus)
 [![GitHub stars](https://img.shields.io/github/stars/Yeachan-Heo/oh-my-claude-sisyphus?style=flat&color=ffd700)](https://github.com/Yeachan-Heo/oh-my-claude-sisyphus/stargazers)
@@ -34,7 +34,7 @@
 
 ---
 
-## ⚡ NEW in 2.6: Compaction-Resilient Memory & Structured Task Tracking
+## ⚡ NEW in 3.0: HUD Statusline, Learned Skills & Enhanced Orchestration
 
 **Game-changing release:** Claude never forgets critical project knowledge, even through context compaction.
 

@@ -171,10 +171,57 @@ All agent names require the `oh-my-claude-sisyphus:` prefix when calling via Tas
 | `/ralph-loop <task>` | Self-referential loop with PRD-based task tracking |
 | `/ralph-init <task>` | Initialize PRD for structured ralph-loop execution |
 | `/cancel-ralph` | Cancel active Ralph Loop |
+| `/mnemosyne` | Extract reusable skill from current problem-solving session |
+| `/hud [preset]` | Configure HUD statusline display (minimal/focused/full) |
+| `/hud setup` | Auto-install HUD statusline |
+| `/note <content>` | Save notes to notepad for compaction resilience |
+
+## Mnemosyne - Learned Skills System
+
+Extract reusable skills from problem-solving sessions. Named after the Greek goddess of memory.
+
+### When to Use
+
+- After solving a tricky bug through investigation
+- When discovering a non-obvious workaround
+- When learning a project-specific pattern
+- When finding a technique worth remembering
+
+### Quality Gates
+
+- Problem clearly stated (min 10 chars)
+- Solution is actionable (min 20 chars)
+- Triggers are specific 3-5 keywords (avoid generic words)
+- No duplicate with similar triggers
+
+### Storage
+
+- User-level: `~/.claude/skills/sisyphus-learned/` (portable across projects)
+- Project-level: `.sisyphus/skills/` (version-controllable with repo)
+
+Skills are automatically injected when trigger keywords are detected in user messages.
+
+## Sisyphus HUD Statusline
+
+Real-time visualization of orchestration state in the Claude Code status bar.
+
+### Display Presets
+
+- **minimal**: `[SISYPHUS] ralph | ultrawork | todos:2/5`
+- **focused** (default): `[SISYPHUS] ralph:3/10 | US-002 | ultrawork skill:prometheus | ctx:67% | agents:2 | bg:3/5 | todos:2/5`
+- **full**: Multi-line with agent tree visualization
+
+### Setup
+
+Run `/hud setup` to auto-install statusline to `~/.claude/hud/sisyphus-hud.mjs`
+
+### Configuration
+
+HUD config stored at: `~/.claude/.sisyphus/hud-config.json`
 
 ## Ralph Loop with PRD Support
 
-Ralph Loop now uses structured PRD (Product Requirements Document) for task tracking, inspired by [snarktank/ralph](https://github.com/snarktank/ralph).
+Ralph Loop now uses structured PRD (Product Requirements Document) for task tracking.
 
 ### How It Works
 
@@ -195,66 +242,6 @@ Repeat until all stories complete
     ↓
 <promise>DONE</promise>
 ```
-
-### PRD File Structure
-
-Ralph-loop creates/uses `.sisyphus/prd.json`:
-
-```json
-{
-  "project": "Feature Name",
-  "branchName": "ralph/feature-name",
-  "description": "Task description",
-  "userStories": [
-    {
-      "id": "US-001",
-      "title": "Story title",
-      "description": "As a user, I want...",
-      "acceptanceCriteria": ["Criterion 1", "Tests pass"],
-      "priority": 1,
-      "passes": false
-    }
-  ]
-}
-```
-
-### Memory Persistence
-
-Ralph-loop uses `.sisyphus/progress.txt` for learnings between iterations:
-
-```
-## Codebase Patterns
-- Pattern discovered during work
-- Gotcha to remember
-
----
-
-## [Date] - US-001
-- What was implemented
-- Files changed
-- **Learnings:**
-  - Pattern or gotcha
-```
-
-### Usage Examples
-
-```bash
-# Start ralph-loop (auto-creates PRD if missing)
-/ralph-loop Add user authentication with JWT
-
-# Manually initialize PRD first (optional)
-/ralph-init Add user authentication with JWT
-/ralph-loop
-
-# Cancel if stuck
-/cancel-ralph
-```
-
-### Completion Flow
-
-1. Work on story → Run tests → Update prd.json (`passes: true`) → Update progress.txt
-2. Repeat for all stories
-3. When all stories pass → Oracle verification → `<promise>DONE</promise>`
 
 ### Key Principles
 
@@ -277,39 +264,12 @@ The `/deepinit` command creates hierarchical documentation for AI agents to unde
 └── tests/AGENTS.md                 ← Test docs
 ```
 
-### Hierarchical Tagging
-
-Each AGENTS.md (except root) includes a parent reference:
-
-```markdown
-<!-- Parent: ../AGENTS.md -->
-```
-
-This enables agents to navigate up the hierarchy for broader context.
-
-### AGENTS.md Contents
-
-- **Purpose**: What the directory contains
-- **Key Files**: Important files with descriptions
-- **Subdirectories**: Links to child AGENTS.md files
-- **For AI Agents**: Special instructions for working in this area
-- **Dependencies**: Relationships with other parts of the codebase
-
 ### Usage
 
 ```bash
 /deepinit              # Index current directory
 /deepinit ./src        # Index specific path
 /deepinit --update     # Update existing AGENTS.md files
-```
-
-### Preserving Manual Notes
-
-Add `<!-- MANUAL -->` in AGENTS.md to preserve content during updates:
-
-```markdown
-<!-- MANUAL: Custom notes below are preserved on regeneration -->
-Important project-specific information here...
 ```
 
 ## Planning Workflow
@@ -322,59 +282,13 @@ Important project-specific information here...
 
 ## Prometheus Context Brokering
 
-When invoking Prometheus for planning (whether auto-triggered by broad request or via /plan), **ALWAYS** follow this protocol to avoid burdening the user with codebase-answerable questions:
+When invoking Prometheus for planning, **ALWAYS** gather codebase context first to avoid burdening the user with codebase-answerable questions:
 
 ### Pre-Gathering Phase
 
-Before invoking Prometheus, gather codebase context:
-
-1. **Invoke explore agent** to gather codebase context:
-```
-Task(subagent_type="oh-my-claude-sisyphus:explore", prompt="Find all files and patterns related to: {user request}. Return key files, existing implementations, and patterns.")
-```
-
-2. **Optionally invoke oracle** for architectural overview (if complex):
-```
-Task(subagent_type="oh-my-claude-sisyphus:oracle", prompt="Analyze architecture for: {user request}. Identify patterns, dependencies, and constraints.")
-```
-
-### Invoking Prometheus With Context
-
-Pass pre-gathered context TO Prometheus so it doesn't ask codebase questions:
-
-```
-Task(subagent_type="oh-my-claude-sisyphus:prometheus", prompt="""
-## Pre-Gathered Codebase Context
-
-### Relevant Files (from explore):
-{explore results}
-
-### Architecture Notes (from oracle):
-{oracle analysis if gathered}
-
-## User Request
-{original request}
-
-## CRITICAL Instructions
-- DO NOT ask questions about codebase structure (already answered above)
-- DO NOT ask "where is X implemented?" (see context above)
-- DO NOT ask "what patterns exist?" (see context above)
-- ONLY ask questions about:
-  - User preferences and priorities
-  - Business requirements and constraints
-  - Scope decisions (what to include/exclude)
-  - Timeline and quality trade-offs
-  - Ownership and maintenance
-""")
-```
-
-### Why Context Brokering Matters
-
-| Without Context Brokering | With Context Brokering |
-|---------------------------|------------------------|
-| Prometheus asks: "What patterns exist in the codebase?" | Prometheus receives: "Auth uses JWT pattern in src/auth/" |
-| Prometheus asks: "Where is authentication implemented?" | Prometheus asks: "What's your timeline for this feature?" |
-| User must research their own codebase | User only answers preference questions |
+1. **Invoke explore agent** to gather codebase context
+2. **Optionally invoke oracle** for architectural overview (if complex)
+3. Pass pre-gathered context TO Prometheus so it doesn't ask codebase questions
 
 **This dramatically improves planning UX** by ensuring the user is only asked questions that require human judgment.
 

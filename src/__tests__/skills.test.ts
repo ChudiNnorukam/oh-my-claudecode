@@ -1,11 +1,18 @@
-import { describe, it, expect } from 'vitest';
-import { createBuiltinSkills, getBuiltinSkill, listBuiltinSkillNames } from '../features/builtin-skills/skills.js';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { createBuiltinSkills, getBuiltinSkill, listBuiltinSkillNames, clearSkillsCache } from '../features/builtin-skills/skills.js';
 
 describe('Builtin Skills', () => {
+  // Clear cache before each test to ensure fresh loads
+  beforeEach(() => {
+    clearSkillsCache();
+  });
+
   describe('createBuiltinSkills()', () => {
-    it('should return correct number of skills (10)', () => {
+    it('should return correct number of skills (12)', () => {
       const skills = createBuiltinSkills();
-      expect(skills).toHaveLength(10);
+      // 12 skills: analyze, deepinit, deepsearch, frontend-ui-ux, git-master,
+      // prometheus, ralph-init, ralph-loop, release, review, sisyphus, ultrawork
+      expect(skills).toHaveLength(12);
     });
 
     it('should return an array of BuiltinSkill objects', () => {
@@ -52,9 +59,8 @@ describe('Builtin Skills', () => {
   });
 
   describe('Skill names', () => {
-    const skills = createBuiltinSkills();
-
     it('should have valid skill names', () => {
+      const skills = createBuiltinSkills();
       const expectedSkills = [
         'sisyphus',
         'ralph-loop',
@@ -66,6 +72,8 @@ describe('Builtin Skills', () => {
         'deepsearch',
         'prometheus',
         'review',
+        'deepinit',
+        'release',
       ];
 
       const actualSkillNames = skills.map((s) => s.name);
@@ -74,6 +82,7 @@ describe('Builtin Skills', () => {
     });
 
     it('should not have duplicate skill names', () => {
+      const skills = createBuiltinSkills();
       const skillNames = skills.map((s) => s.name);
       const uniqueNames = new Set(skillNames);
       expect(uniqueNames.size).toBe(skillNames.length);
@@ -108,7 +117,7 @@ describe('Builtin Skills', () => {
   describe('listBuiltinSkillNames()', () => {
     it('should return all skill names', () => {
       const names = listBuiltinSkillNames();
-      expect(names).toHaveLength(10);
+      expect(names).toHaveLength(12);
       expect(names).toContain('sisyphus');
       expect(names).toContain('ralph-loop');
       expect(names).toContain('ralph-init');
@@ -119,6 +128,8 @@ describe('Builtin Skills', () => {
       expect(names).toContain('deepsearch');
       expect(names).toContain('prometheus');
       expect(names).toContain('review');
+      expect(names).toContain('deepinit');
+      expect(names).toContain('release');
     });
 
     it('should return an array of strings', () => {
