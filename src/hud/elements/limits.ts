@@ -1,5 +1,5 @@
 /**
- * Sisyphus HUD - Rate Limits Element
+ * OMC HUD - Rate Limits Element
  *
  * Renders 5-hour and weekly rate limit usage display.
  */

@@ -1,5 +1,5 @@
 /**
- * Sisyphus HUD - Background Tasks Element
+ * OMC HUD - Background Tasks Element
  *
  * Renders background task count display.
  */

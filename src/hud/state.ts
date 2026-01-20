@@ -1,5 +1,5 @@
 /**
- * Sisyphus HUD - State Management
+ * OMC HUD - State Management
  *
  * Manages HUD state file for background task tracking.
  * Follows patterns from ultrawork-state.
@@ -8,7 +8,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import type { SisyphusHudState, BackgroundTask, HudConfig } from './types.js';
+import type { OmcHudState, BackgroundTask, HudConfig } from './types.js';
 import { DEFAULT_HUD_CONFIG, PRESET_CONFIGS } from './types.js';
 
 // ============================================================================
@@ -76,7 +76,7 @@ function ensureGlobalStateDir(): void {
 /**
  * Read HUD state from disk (checks both local and global)
  */
-export function readHudState(directory?: string): SisyphusHudState | null {
+export function readHudState(directory?: string): OmcHudState | null {
   // Check local state first
   const localStateFile = getLocalStateFilePath(directory);
   if (existsSync(localStateFile)) {
@@ -106,7 +106,7 @@ export function readHudState(directory?: string): SisyphusHudState | null {
  * Write HUD state to disk (both local and global for redundancy)
  */
 export function writeHudState(
-  state: SisyphusHudState,
+  state: OmcHudState,
   directory?: string
 ): boolean {
   try {
@@ -129,7 +129,7 @@ export function writeHudState(
 /**
  * Create a new empty HUD state
  */
-export function createEmptyHudState(): SisyphusHudState {
+export function createEmptyHudState(): OmcHudState {
   return {
     timestamp: new Date().toISOString(),
     backgroundTasks: [],
@@ -139,7 +139,7 @@ export function createEmptyHudState(): SisyphusHudState {
 /**
  * Get running background tasks from state
  */
-export function getRunningTasks(state: SisyphusHudState | null): BackgroundTask[] {
+export function getRunningTasks(state: OmcHudState | null): BackgroundTask[] {
   if (!state) return [];
   return state.backgroundTasks.filter((task) => task.status === 'running');
 }
@@ -147,7 +147,7 @@ export function getRunningTasks(state: SisyphusHudState | null): BackgroundTask[
 /**
  * Get background task count string (e.g., "3/5")
  */
-export function getBackgroundTaskCount(state: SisyphusHudState | null): {
+export function getBackgroundTaskCount(state: OmcHudState | null): {
   running: number;
   max: number;
 } {

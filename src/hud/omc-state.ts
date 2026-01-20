@@ -1,7 +1,7 @@
 /**
- * Sisyphus HUD - State Readers
+ * OMC HUD - State Readers
  *
- * Read ralph, ultrawork, and PRD state from existing Sisyphus files.
+ * Read ralph, ultrawork, and PRD state from existing OMC files.
  * These are read-only functions that don't modify the state files.
  */
 
@@ -200,7 +200,7 @@ export function readPrdStateForHud(directory: string): PrdStateForHud | null {
 // ============================================================================
 
 /**
- * Check if any Sisyphus mode is currently active
+ * Check if any OMC mode is currently active
  */
 export function isAnyModeActive(directory: string): boolean {
   const ralph = readRalphStateForHud(directory);

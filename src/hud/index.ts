@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Sisyphus HUD - Main Entry Point
+ * OMC HUD - Main Entry Point
  *
  * Statusline command that visualizes oh-my-claudecode state.
  * Receives stdin JSON from Claude Code and outputs formatted statusline.
@@ -50,7 +50,7 @@ async function main(): Promise<void> {
 
     if (!stdin) {
       // No stdin - output placeholder
-      console.log('[SISYPHUS] waiting...');
+      console.log('[OMC] waiting...');
       return;
     }
 
@@ -59,7 +59,7 @@ async function main(): Promise<void> {
     // Parse transcript for agents and todos
     const transcriptData = await parseTranscript(stdin.transcript_path);
 
-    // Read Sisyphus state files
+    // Read OMC state files
     const ralph = readRalphStateForHud(cwd);
     const ultrawork = readUltraworkStateForHud(cwd);
     const prd = readPrdStateForHud(cwd);
@@ -102,7 +102,7 @@ async function main(): Promise<void> {
     console.log(formattedOutput);
   } catch (error) {
     // On any error, show minimal fallback
-    console.log('[SISYPHUS] error');
+    console.log('[OMC] error');
   }
 }
 

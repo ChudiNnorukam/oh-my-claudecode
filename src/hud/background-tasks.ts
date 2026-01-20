@@ -1,12 +1,12 @@
 /**
- * Sisyphus HUD - Background Task Management
+ * OMC HUD - Background Task Management
  *
  * Functions for tracking background tasks via hooks.
  * Called from bridge.ts pre-tool-use and post-tool-use handlers.
  */
 
 import { readHudState, writeHudState, createEmptyHudState } from './state.js';
-import type { BackgroundTask, SisyphusHudState } from './types.js';
+import type { BackgroundTask, OmcHudState } from './types.js';
 
 const MAX_TASK_HISTORY = 20;
 const TASK_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
@@ -78,7 +78,7 @@ export function completeBackgroundTask(
 /**
  * Clean up old and expired tasks from state.
  */
-function cleanupTasks(state: SisyphusHudState): SisyphusHudState {
+function cleanupTasks(state: OmcHudState): OmcHudState {
   const now = Date.now();
 
   // Filter out expired completed/failed tasks

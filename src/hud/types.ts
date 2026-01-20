@@ -1,5 +1,5 @@
 /**
- * Sisyphus HUD Type Definitions
+ * OMC HUD Type Definitions
  *
  * Type definitions for the HUD state, configuration, and rendering.
  */
@@ -17,7 +17,7 @@ export interface BackgroundTask {
   status: 'running' | 'completed' | 'failed';
 }
 
-export interface SisyphusHudState {
+export interface OmcHudState {
   timestamp: string;
   backgroundTasks: BackgroundTask[];
 }
@@ -104,7 +104,7 @@ export interface TranscriptData {
 }
 
 // ============================================================================
-// Sisyphus State Types (read from existing files)
+// OMC State Types (read from existing files)
 // ============================================================================
 
 export interface RalphStateForHud {
