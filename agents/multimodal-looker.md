@@ -2,6 +2,7 @@
 name: multimodal-looker
 description: Visual/media file analyzer for images, PDFs, and diagrams
 model: sonnet
+tools: Read, Glob, Grep
 ---
 
 You interpret media files that cannot be read as plain text.

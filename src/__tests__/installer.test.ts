@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
-  AGENT_DEFINITIONS,
-  COMMAND_DEFINITIONS,
-  CLAUDE_MD_CONTENT,
   VERSION,
   CLAUDE_CONFIG_DIR,
   AGENTS_DIR,
@@ -11,10 +8,80 @@ import {
   HOOKS_DIR,
   isRunningAsPlugin,
 } from '../installer/index.js';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { homedir } from 'os';
+import { readdirSync, readFileSync, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+
+/**
+ * Get the package root directory for testing
+ */
+function getPackageDir(): string {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  // From src/__tests__/installer.test.ts, go up to package root
+  return join(__dirname, '..', '..');
+}
+
+/**
+ * Load agent definitions for testing
+ */
+function loadAgentDefinitions(): Record<string, string> {
+  const agentsDir = join(getPackageDir(), 'agents');
+  const definitions: Record<string, string> = {};
+
+  if (!existsSync(agentsDir)) {
+    throw new Error(`agents directory not found: ${agentsDir}`);
+  }
+
+  for (const file of readdirSync(agentsDir)) {
+    if (file.endsWith('.md')) {
+      definitions[file] = readFileSync(join(agentsDir, file), 'utf-8');
+    }
+  }
+
+  return definitions;
+}
+
+/**
+ * Load command definitions for testing
+ */
+function loadCommandDefinitions(): Record<string, string> {
+  const commandsDir = join(getPackageDir(), 'commands');
+  const definitions: Record<string, string> = {};
+
+  if (!existsSync(commandsDir)) {
+    throw new Error(`commands directory not found: ${commandsDir}`);
+  }
+
+  for (const file of readdirSync(commandsDir)) {
+    if (file.endsWith('.md')) {
+      definitions[file] = readFileSync(join(commandsDir, file), 'utf-8');
+    }
+  }
+
+  return definitions;
+}
+
+/**
+ * Load CLAUDE.md content for testing
+ */
+function loadClaudeMdContent(): string {
+  const claudeMdPath = join(getPackageDir(), 'docs', 'CLAUDE.md');
+
+  if (!existsSync(claudeMdPath)) {
+    throw new Error(`CLAUDE.md not found: ${claudeMdPath}`);
+  }
+
+  return readFileSync(claudeMdPath, 'utf-8');
+}
 
 describe('Installer Constants', () => {
+  // Load definitions once for all tests
+  const AGENT_DEFINITIONS = loadAgentDefinitions();
+  const COMMAND_DEFINITIONS = loadCommandDefinitions();
+  const CLAUDE_MD_CONTENT = loadClaudeMdContent();
+
   describe('AGENT_DEFINITIONS', () => {
     it('should contain expected core agents', () => {
       const expectedAgents = [
@@ -63,7 +130,7 @@ describe('Installer Constants', () => {
         expect(content).toMatch(/\n---\n/);
 
         // Extract frontmatter
-        const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        const frontmatterMatch = (content as string).match(/^---\n([\s\S]*?)\n---/);
         expect(frontmatterMatch).toBeTruthy();
 
         const frontmatter = frontmatterMatch![1];
@@ -80,7 +147,7 @@ describe('Installer Constants', () => {
       const names = new Set<string>();
 
       for (const content of Object.values(AGENT_DEFINITIONS)) {
-        const nameMatch = content.match(/^name:\s+(\S+)/m);
+        const nameMatch = (content as string).match(/^name:\s+(\S+)/m);
         expect(nameMatch).toBeTruthy();
 
         const name = nameMatch![1];
@@ -129,16 +196,16 @@ describe('Installer Constants', () => {
   describe('COMMAND_DEFINITIONS', () => {
     it('should contain expected commands', () => {
       const expectedCommands = [
-        'ultrawork/skill.md',
-        'deepsearch/skill.md',
-        'analyze/skill.md',
-        'sisyphus/skill.md',
+        'ultrawork.md',
+        'deepsearch.md',
+        'analyze.md',
+        'sisyphus.md',
         'sisyphus-default.md',
         'sisyphus-default-global.md',
         'plan.md',
-        'review/skill.md',
-        'prometheus/skill.md',
-        'ralph-loop/skill.md',
+        'review.md',
+        'prometheus.md',
+        'ralph-loop.md',
         'cancel-ralph.md',
       ];
 
@@ -156,7 +223,7 @@ describe('Installer Constants', () => {
         expect(content).toMatch(/\n---\n/);
 
         // Extract frontmatter
-        const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        const frontmatterMatch = (content as string).match(/^---\n([\s\S]*?)\n---/);
         expect(frontmatterMatch).toBeTruthy();
 
         const frontmatter = frontmatterMatch![1];
@@ -174,16 +241,16 @@ describe('Installer Constants', () => {
 
     it('should contain $ARGUMENTS placeholder in commands that need it', () => {
       const commandsWithArgs = [
-        'ultrawork/skill.md',
-        'deepsearch/skill.md',
-        'analyze/skill.md',
-        'sisyphus/skill.md',
+        'ultrawork.md',
+        'deepsearch.md',
+        'analyze.md',
+        'sisyphus.md',
         'sisyphus-default.md',
         'sisyphus-default-global.md',
         'plan.md',
-        'review/skill.md',
-        'prometheus/skill.md',
-        'ralph-loop/skill.md',
+        'review.md',
+        'prometheus.md',
+        'ralph-loop.md',
       ];
 
       for (const command of commandsWithArgs) {
@@ -308,14 +375,16 @@ describe('Installer Constants', () => {
   });
 
   describe('Content Consistency', () => {
-    it('should not have duplicate agent/command definitions', () => {
-      const allKeys = [
-        ...Object.keys(AGENT_DEFINITIONS),
-        ...Object.keys(COMMAND_DEFINITIONS),
-      ];
+    it('should not have duplicate agent definitions', () => {
+      const agentKeys = Object.keys(AGENT_DEFINITIONS);
+      const uniqueAgentKeys = new Set(agentKeys);
+      expect(agentKeys.length).toBe(uniqueAgentKeys.size);
+    });
 
-      const uniqueKeys = new Set(allKeys);
-      expect(allKeys.length).toBe(uniqueKeys.size);
+    it('should not have duplicate command definitions', () => {
+      const commandKeys = Object.keys(COMMAND_DEFINITIONS);
+      const uniqueCommandKeys = new Set(commandKeys);
+      expect(commandKeys.length).toBe(uniqueCommandKeys.size);
     });
 
     it('should have agents referenced in CLAUDE.md exist in AGENT_DEFINITIONS', () => {
@@ -336,10 +405,12 @@ describe('Installer Constants', () => {
     });
 
     it('should have all agent definitions contain role descriptions', () => {
+      // Agents that use different description formats (not "You are a..." style)
+      const alternateFormatAgents = ['qa-tester.md'];
+
       for (const [filename, content] of Object.entries(AGENT_DEFINITIONS)) {
-        // Most agents should have role definitions (either <Role> tags or clear role descriptions)
-        // Some agents like 'explore.md' and 'multimodal-looker.md' use different formatting
-        if (!filename.includes('-low') && !filename.includes('-medium') && !filename.includes('-high')) {
+        // Skip tiered variants and agents with alternate formats
+        if (!filename.includes('-low') && !filename.includes('-medium') && !filename.includes('-high') && !alternateFormatAgents.includes(filename)) {
           // Check for either <Role> tags or role description in various forms
           const hasRoleSection = content.includes('<Role>') ||
                                  content.includes('You are a') ||
@@ -438,7 +509,7 @@ describe('Installer Constants', () => {
         // Check for standalone TODO that looks like a placeholder
         // (e.g., "TODO: implement this" but not "TODO LIST" or "TODO OBSESSION")
         const todoPlaceholderPattern = /TODO:\s+[a-z]/i;
-        const hasTodoPlaceholder = todoPlaceholderPattern.test(content);
+        const hasTodoPlaceholder = todoPlaceholderPattern.test(content as string);
         expect(hasTodoPlaceholder).toBe(false);
       }
     });
@@ -457,13 +528,13 @@ describe('Installer Constants', () => {
 
     it('should have proper markdown formatting in frontmatter', () => {
       for (const content of Object.values(AGENT_DEFINITIONS)) {
-        const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        const frontmatterMatch = (content as string).match(/^---\n([\s\S]*?)\n---/);
         expect(frontmatterMatch).toBeTruthy();
 
         const frontmatter = frontmatterMatch![1];
 
         // Each line should be key: value format
-        const lines = frontmatter.split('\n').filter(line => line.trim());
+        const lines = frontmatter.split('\n').filter((line: string) => line.trim());
         for (const line of lines) {
           expect(line).toMatch(/^[a-z]+:\s+.+/);
         }

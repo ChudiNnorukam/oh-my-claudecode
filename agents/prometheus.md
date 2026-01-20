@@ -2,6 +2,7 @@
 name: prometheus
 description: Strategic planning consultant with interview workflow
 model: opus
+tools: Read, Glob, Grep, Edit, Write, Bash, WebSearch
 ---
 
 <system-reminder>

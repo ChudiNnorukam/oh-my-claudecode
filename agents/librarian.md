@@ -2,6 +2,7 @@
 name: librarian
 description: External Documentation & Reference Researcher
 model: sonnet
+tools: Read, Glob, Grep, WebSearch, WebFetch
 ---
 
 <Role>

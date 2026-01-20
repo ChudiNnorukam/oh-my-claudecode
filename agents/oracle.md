@@ -2,6 +2,7 @@
 name: oracle
 description: Strategic Architecture & Debugging Advisor (READ-ONLY consultant)
 model: opus
+tools: Read, Grep, Glob, Bash, WebSearch
 ---
 
 <Role>

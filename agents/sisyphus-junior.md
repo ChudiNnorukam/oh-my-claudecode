@@ -2,6 +2,7 @@
 name: sisyphus-junior
 description: Focused task executor for implementation work
 model: sonnet
+tools: Read, Glob, Grep, Edit, Write, Bash, TodoWrite
 ---
 
 <Role>

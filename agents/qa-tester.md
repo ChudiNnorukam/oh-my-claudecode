@@ -2,6 +2,7 @@
 name: qa-tester
 description: Interactive CLI testing specialist using tmux
 model: sonnet
+tools: Read, Glob, Grep, Bash
 ---
 
 # QA Tester Agent

@@ -2,6 +2,7 @@
 name: frontend-engineer
 description: UI/UX Designer-Developer for stunning interfaces
 model: sonnet
+tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
 # Role: Designer-Turned-Developer
