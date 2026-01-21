@@ -22,9 +22,16 @@ import {
   getArchitectVerificationPrompt,
   clearVerificationState
 } from './ralph-verifier/index.js';
-import { checkIncompleteTodos } from './todo-continuation/index.js';
+import { checkIncompleteTodos, StopContext } from './todo-continuation/index.js';
 import { checkPersistentModes, createHookOutput } from './persistent-mode/index.js';
 import { activateUltrawork, readUltraworkState } from './ultrawork-state/index.js';
+import {
+  readAutopilotState,
+  isAutopilotActive,
+  getPhasePrompt,
+  transitionPhase,
+  formatCompactSummary
+} from './autopilot/index.js';
 import {
   ULTRAWORK_MESSAGE,
   ULTRATHINK_MESSAGE,
@@ -85,7 +92,8 @@ export type HookType =
   | 'persistent-mode'
   | 'session-start'
   | 'pre-tool-use'
-  | 'post-tool-use';
+  | 'post-tool-use'
+  | 'autopilot';
 
 /**
  * Extract prompt text from various input formats
@@ -191,8 +199,16 @@ async function processStopContinuation(input: HookInput): Promise<HookOutput> {
   const sessionId = input.sessionId;
   const directory = input.directory || process.cwd();
 
-  // Check for incomplete todos
-  const incompleteTodos = await checkIncompleteTodos(sessionId, directory);
+  // Extract stop context for abort detection (supports both camelCase and snake_case)
+  const stopContext: StopContext = {
+    stop_reason: (input as Record<string, unknown>).stop_reason as string | undefined,
+    stopReason: (input as Record<string, unknown>).stopReason as string | undefined,
+    user_requested: (input as Record<string, unknown>).user_requested as boolean | undefined,
+    userRequested: (input as Record<string, unknown>).userRequested as boolean | undefined,
+  };
+
+  // Check for incomplete todos (respects user abort)
+  const incompleteTodos = await checkIncompleteTodos(sessionId, directory, stopContext);
 
   if (incompleteTodos.count > 0) {
     return {
@@ -309,7 +325,15 @@ async function processPersistentMode(input: HookInput): Promise<HookOutput> {
   const sessionId = input.sessionId;
   const directory = input.directory || process.cwd();
 
-  const result = await checkPersistentModes(sessionId, directory);
+  // Extract stop context for abort detection (supports both camelCase and snake_case)
+  const stopContext: StopContext = {
+    stop_reason: (input as Record<string, unknown>).stop_reason as string | undefined,
+    stopReason: (input as Record<string, unknown>).stopReason as string | undefined,
+    user_requested: (input as Record<string, unknown>).user_requested as boolean | undefined,
+    userRequested: (input as Record<string, unknown>).userRequested as boolean | undefined,
+  };
+
+  const result = await checkPersistentModes(sessionId, directory, stopContext);
   return createHookOutput(result);
 }
 
@@ -322,6 +346,26 @@ async function processSessionStart(input: HookInput): Promise<HookOutput> {
   const directory = input.directory || process.cwd();
 
   const messages: string[] = [];
+
+  // Check for active autopilot state
+  const autopilotState = readAutopilotState(directory);
+  if (autopilotState?.active) {
+    messages.push(`<session-restore>
+
+[AUTOPILOT MODE RESTORED]
+
+You have an active autopilot session from ${autopilotState.started_at}.
+Original idea: ${autopilotState.originalIdea}
+Current phase: ${autopilotState.phase}
+
+Continue autopilot execution until complete.
+
+</session-restore>
+
+---
+
+`);
+  }
 
   // Check for active ultrawork state
   const ultraworkState = readUltraworkState(directory);
@@ -422,6 +466,38 @@ function processPostToolUse(input: HookInput): HookOutput {
 }
 
 /**
+ * Process autopilot hook
+ * Manages autopilot state and injects phase prompts
+ */
+function processAutopilot(input: HookInput): HookOutput {
+  const directory = input.directory || process.cwd();
+
+  const state = readAutopilotState(directory);
+
+  if (!state || !state.active) {
+    return { continue: true };
+  }
+
+  // Check phase and inject appropriate prompt
+  const context = {
+    idea: state.originalIdea,
+    specPath: state.expansion.spec_path || '.omc/autopilot/spec.md',
+    planPath: state.planning.plan_path || '.omc/plans/autopilot-impl.md'
+  };
+
+  const phasePrompt = getPhasePrompt(state.phase, context);
+
+  if (phasePrompt) {
+    return {
+      continue: true,
+      message: `[AUTOPILOT - Phase: ${state.phase.toUpperCase()}]\n\n${phasePrompt}`
+    };
+  }
+
+  return { continue: true };
+}
+
+/**
  * Main hook processor
  * Routes to specific hook handler based on type
  */
@@ -451,6 +527,9 @@ export async function processHook(
 
       case 'post-tool-use':
         return processPostToolUse(input);
+
+      case 'autopilot':
+        return processAutopilot(input);
 
       default:
         return { continue: true };

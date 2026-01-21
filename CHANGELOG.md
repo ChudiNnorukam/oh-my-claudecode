@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-01-21
+
+### Added
+- **Autopilot Command**: Full autonomous execution from idea to working code
+  - 5-phase workflow: Expansion → Planning → Execution → QA → Validation
+  - Magic keywords: "autopilot", "build me", "create me", "I want a/an"
+  - Parallel validation with 3 architects (functional, security, quality)
+  - Resume support with progress preservation
+- **Cancel-autopilot Skill**: Graceful cancellation with state preservation
+- **8 new specialized agents registered**: security-reviewer, security-reviewer-low, build-fixer, build-fixer-low, tdd-guide, tdd-guide-low, code-reviewer, code-reviewer-low
+- **Autopilot HUD element**: Real-time phase progress display
+
+### Changed
+- Agent count: 20 → 28 (8 previously documented agents now registered)
+- Skill count: 26 → 28 (autopilot + cancel-autopilot)
+- Updated docs/CLAUDE.md with autopilot integration
+
+---
+
+## [3.1.1] - 2026-01-21
+
+### Added
+- **Non-blocking queue system**: Background tasks now enter `'queued'` status when waiting for concurrency slot
+- **Stale session detection**: New `staleThresholdMs` and `onStaleSession` callback detect hung tasks (default: 5 min)
+- **Model preservation**: Background tasks inherit parent session's model via `parentModel` field
+- **User abort detection**: New `StopContext` and `isUserAbort()` detect user-initiated stops (Ctrl+C, cancel)
+
+### Changed
+- **Capacity enforcement**: `maxTotalTasks` now counts both running AND queued tasks
+- **Status display**: `getStatusSummary()` shows queued count and wait times
+- **Continuation hooks**: Ralph-loop, ultrawork, and todo-continuation now respect user aborts
+
+### Fixed
+- **Graceful stop handling**: Users can now cleanly exit persistent modes without forced continuation
+
+---
+
 ## [3.1.0] - 2026-01-21
 
 ### Added

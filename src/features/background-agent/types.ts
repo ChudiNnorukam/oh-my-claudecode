@@ -10,7 +10,8 @@
  * Status of a background task
  */
 export type BackgroundTaskStatus =
-  | 'pending'
+  | 'queued'      // Waiting for concurrency slot
+  | 'pending'     // @deprecated Use 'queued' instead. Kept for backward compatibility.
   | 'running'
   | 'completed'
   | 'error'
@@ -50,6 +51,8 @@ export interface BackgroundTask {
   agent: string;
   /** Current status */
   status: BackgroundTaskStatus;
+  /** When the task was queued (waiting for concurrency) */
+  queuedAt?: Date;
   /** When the task started */
   startedAt: Date;
   /** When the task completed (if completed) */
@@ -62,6 +65,8 @@ export interface BackgroundTask {
   progress?: TaskProgress;
   /** Key for concurrency tracking */
   concurrencyKey?: string;
+  /** Parent model (preserved from launch input) */
+  parentModel?: string;
 }
 
 /**
@@ -93,6 +98,26 @@ export interface ResumeInput {
 }
 
 /**
+ * Context for resuming a background task
+ */
+export interface ResumeContext {
+  /** Session ID of the task */
+  sessionId: string;
+  /** Original prompt for the task */
+  previousPrompt: string;
+  /** Number of tool calls made so far */
+  toolCallCount: number;
+  /** Last tool used (if any) */
+  lastToolUsed?: string;
+  /** Summary of last output (truncated) */
+  lastOutputSummary?: string;
+  /** When the task started */
+  startedAt: Date;
+  /** When the task was last active */
+  lastActivityAt: Date;
+}
+
+/**
  * Configuration for background task concurrency
  */
 export interface BackgroundTaskConfig {
@@ -106,4 +131,10 @@ export interface BackgroundTaskConfig {
   maxTotalTasks?: number;
   /** Task timeout in milliseconds */
   taskTimeoutMs?: number;
+  /** Maximum queue size (tasks waiting for slot). If not set, uses maxTotalTasks - running as implicit limit */
+  maxQueueSize?: number;
+  /** Threshold in ms for detecting stale sessions (default: 5 min) */
+  staleThresholdMs?: number;
+  /** Callback when stale session detected */
+  onStaleSession?: (task: BackgroundTask) => void;
 }
