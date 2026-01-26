@@ -1,6 +1,8 @@
 import { executeCodex, isCodexAvailable, type CodexExecResult } from '../agents/codex-executor.js';
+import type { ModelType } from '../shared/types.js';
 
-export type ModelType = 'opus' | 'sonnet' | 'haiku';
+// Re-export for backward compatibility
+export type { ModelType };
 
 export class CodexNotAvailableError extends Error {
   constructor(message: string = 'Codex is not available') {

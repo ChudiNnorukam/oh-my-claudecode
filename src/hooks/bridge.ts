@@ -40,6 +40,8 @@ import {
   TODO_CONTINUATION_PROMPT,
   RALPH_MESSAGE
 } from '../installer/hooks.js';
+import { routeToCodex, CodexNotAvailableError } from '../features/codex-router.js';
+import { getAgentDefinitions } from '../agents/definitions.js';
 
 /**
  * Input format from Claude Code hooks (via stdin)
@@ -416,8 +418,9 @@ Please continue working on these tasks.
 /**
  * Process pre-tool-use hook
  * Tracks background tasks when Task tool is invoked
+ * Routes codex agents to Codex CLI instead of Claude SDK
  */
-function processPreToolUse(input: HookInput): HookOutput {
+async function processPreToolUse(input: HookInput): Promise<HookOutput> {
   const directory = input.directory || process.cwd();
 
   // Track Task tool invocations for HUD background tasks display
@@ -425,10 +428,58 @@ function processPreToolUse(input: HookInput): HookOutput {
     const toolInput = input.toolInput as {
       description?: string;
       subagent_type?: string;
+      prompt?: string;
+      model?: 'opus' | 'sonnet' | 'haiku';
       run_in_background?: boolean;
     } | undefined;
 
-    // Only track if running in background or likely to take a while
+    // Check for codex agent routing FIRST
+    if (toolInput?.subagent_type) {
+      const agentType = toolInput.subagent_type.replace(/^oh-my-claudecode:/, '');
+
+      // Check if this is a codex agent (ends with -codex suffix)
+      if (agentType.endsWith('-codex')) {
+        const agentDefs = getAgentDefinitions();
+        const agentDef = agentDefs[agentType];
+
+        // Only route to Codex if agent has executionType='codex'
+        if (agentDef?.executionType === 'codex') {
+          try {
+            const result = await routeToCodex(
+              agentType,
+              toolInput.prompt || '',
+              toolInput.model || agentDef.defaultModel || 'opus'
+            );
+
+            if (result.success) {
+              // Return the Codex result, blocking Claude execution
+              return {
+                continue: false,
+                message: result.output,
+                reason: `[Codex CLI] Executed via gpt-5.2`
+              };
+            } else {
+              // Codex execution failed - return error
+              return {
+                continue: false,
+                message: `Codex execution failed: ${result.error || 'Unknown error'}`,
+                reason: 'Codex CLI error'
+              };
+            }
+          } catch (error) {
+            if (error instanceof CodexNotAvailableError) {
+              // Throw to let orchestrator handle fallback
+              throw error;
+            }
+            // Other errors - log and let Claude handle it
+            console.error('[hook-bridge] Codex routing error:', error);
+            return { continue: true };
+          }
+        }
+      }
+    }
+
+    // Standard HUD tracking for non-codex agents
     if (toolInput?.description) {
       // Generate a pseudo-ID from the description hash (tool_use_id not available in pre-hook)
       const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -523,7 +574,7 @@ export async function processHook(
         return await processSessionStart(input);
 
       case 'pre-tool-use':
-        return processPreToolUse(input);
+        return await processPreToolUse(input);
 
       case 'post-tool-use':
         return processPostToolUse(input);
@@ -535,7 +586,11 @@ export async function processHook(
         return { continue: true };
     }
   } catch (error) {
-    // Log error but don't block execution
+    // Re-throw CodexNotAvailableError to let orchestrator handle fallback
+    if (error instanceof CodexNotAvailableError) {
+      throw error;
+    }
+    // Log other errors but don't block execution
     console.error(`[hook-bridge] Error in ${hookType}:`, error);
     return { continue: true };
   }
