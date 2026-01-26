@@ -1,0 +1,405 @@
+/**
+ * Swarm Coordination System
+ *
+ * SQLite-based multi-agent task coordination.
+ * Enables N agents to claim and work on tasks from a shared pool
+ * with atomic claiming, lease-based ownership, and heartbeat monitoring.
+ *
+ * Usage:
+ * ```typescript
+ * import { startSwarm, claimTask, completeTask, stopSwarm } from './swarm';
+ *
+ * // Initialize swarm with tasks
+ * await startSwarm({
+ *   agentCount: 5,
+ *   tasks: ['fix error in auth.ts', 'add tests for api.ts', ...],
+ *   cwd: process.cwd()
+ * });
+ *
+ * // Each agent claims and works on tasks
+ * const claim = claimTask('agent-1');
+ * if (claim.success) {
+ *   // Do work...
+ *   completeTask('agent-1', claim.taskId!, 'Fixed the bug');
+ * }
+ *
+ * // Check status
+ * const status = getSwarmStatus();
+ *
+ * // Clean up when done
+ * stopSwarm();
+ * ```
+ */
+
+import { randomUUID } from 'crypto';
+import type {
+  SwarmConfig,
+  SwarmState,
+  SwarmTask,
+  SwarmStats,
+  ClaimResult,
+  AgentHeartbeat
+} from './types.js';
+import { DEFAULT_SWARM_CONFIG } from './types.js';
+import {
+  initDb,
+  closeDb,
+  deleteDb,
+  isDbInitialized,
+  initSession,
+  loadState,
+  saveState,
+  addTasks,
+  getTasks,
+  getTasksByStatus,
+  getTask,
+  getStats,
+  getHeartbeats,
+  clearAllData
+} from './state.js';
+import {
+  claimTask as claimTaskInternal,
+  releaseTask as releaseTaskInternal,
+  completeTask as completeTaskInternal,
+  failTask as failTaskInternal,
+  heartbeat as heartbeatInternal,
+  cleanupStaleClaims as cleanupStaleClaimsInternal,
+  getTasksClaimedBy,
+  hasPendingTasks,
+  allTasksComplete,
+  getActiveAgentCount,
+  reclaimFailedTask
+} from './claiming.js';
+
+// Current working directory for the swarm
+let currentCwd: string | null = null;
+
+// Cleanup interval handle
+let cleanupIntervalHandle: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Start a new swarm session
+ *
+ * Initializes the SQLite database, creates the task pool,
+ * and starts the stale claim cleanup timer.
+ *
+ * @param config - Swarm configuration
+ * @returns true if swarm was started successfully
+ */
+export async function startSwarm(config: SwarmConfig): Promise<boolean> {
+  const {
+    agentCount,
+    tasks,
+    cwd = process.cwd(),
+    leaseTimeout = DEFAULT_SWARM_CONFIG.leaseTimeout
+  } = config;
+
+  if (tasks.length === 0) {
+    console.error('Cannot start swarm with no tasks');
+    return false;
+  }
+
+  if (agentCount < 1) {
+    console.error('Agent count must be at least 1');
+    return false;
+  }
+
+  // Initialize database
+  const dbInitialized = await initDb(cwd);
+  if (!dbInitialized) {
+    console.error('Failed to initialize swarm database');
+    return false;
+  }
+
+  currentCwd = cwd;
+
+  // Clear any existing data
+  clearAllData();
+
+  // Create session
+  const sessionId = randomUUID();
+  if (!initSession(sessionId, agentCount)) {
+    console.error('Failed to initialize swarm session');
+    return false;
+  }
+
+  // Add tasks to pool
+  const taskRecords = tasks.map((description, index) => ({
+    id: `task-${index + 1}`,
+    description
+  }));
+
+  if (!addTasks(taskRecords)) {
+    console.error('Failed to add tasks to pool');
+    return false;
+  }
+
+  // Start cleanup timer (runs every minute)
+  cleanupIntervalHandle = setInterval(() => {
+    cleanupStaleClaimsInternal(leaseTimeout);
+  }, 60 * 1000);
+
+  return true;
+}
+
+/**
+ * Stop the swarm and clean up resources
+ *
+ * Stops the cleanup timer and optionally deletes the database.
+ *
+ * @param deleteDatabase - Whether to delete the database file (default: false)
+ * @returns true if swarm was stopped successfully
+ */
+export function stopSwarm(deleteDatabase: boolean = false): boolean {
+  // Stop cleanup timer
+  if (cleanupIntervalHandle) {
+    clearInterval(cleanupIntervalHandle);
+    cleanupIntervalHandle = null;
+  }
+
+  // Mark session as inactive
+  saveState({ active: false, completedAt: Date.now() });
+
+  // Close database
+  closeDb();
+
+  // Optionally delete database
+  if (deleteDatabase && currentCwd) {
+    deleteDb(currentCwd);
+  }
+
+  currentCwd = null;
+  return true;
+}
+
+/**
+ * Get the current swarm status
+ *
+ * @returns SwarmState or null if swarm is not active
+ */
+export function getSwarmStatus(): SwarmState | null {
+  return loadState();
+}
+
+/**
+ * Get swarm statistics
+ *
+ * @returns SwarmStats with task counts and timing info
+ */
+export function getSwarmStats(): SwarmStats | null {
+  return getStats();
+}
+
+/**
+ * Claim the next available task
+ *
+ * @param agentId - Unique identifier for the claiming agent
+ * @returns ClaimResult with success status and task details
+ */
+export function claimTask(agentId: string): ClaimResult {
+  return claimTaskInternal(agentId);
+}
+
+/**
+ * Release a claimed task back to the pool
+ *
+ * @param agentId - Agent releasing the task
+ * @param taskId - Task to release
+ * @returns true if release was successful
+ */
+export function releaseTask(agentId: string, taskId: string): boolean {
+  return releaseTaskInternal(agentId, taskId);
+}
+
+/**
+ * Mark a task as completed
+ *
+ * @param agentId - Agent that completed the task
+ * @param taskId - Completed task ID
+ * @param result - Optional result/output from the task
+ * @returns true if completion was recorded
+ */
+export function completeTask(agentId: string, taskId: string, result?: string): boolean {
+  const success = completeTaskInternal(agentId, taskId, result);
+
+  // Check if all tasks are complete
+  if (success && allTasksComplete()) {
+    saveState({ completedAt: Date.now() });
+  }
+
+  return success;
+}
+
+/**
+ * Mark a task as failed
+ *
+ * @param agentId - Agent that failed the task
+ * @param taskId - Failed task ID
+ * @param error - Error message/reason for failure
+ * @returns true if failure was recorded
+ */
+export function failTask(agentId: string, taskId: string, error: string): boolean {
+  return failTaskInternal(agentId, taskId, error);
+}
+
+/**
+ * Send a heartbeat to indicate the agent is still alive
+ *
+ * Agents should call this every 60 seconds while working on tasks.
+ *
+ * @param agentId - Agent sending heartbeat
+ * @returns true if heartbeat was recorded
+ */
+export function heartbeat(agentId: string): boolean {
+  return heartbeatInternal(agentId);
+}
+
+/**
+ * Clean up stale claims from dead agents
+ *
+ * Called automatically by the cleanup timer, but can also be called manually.
+ *
+ * @param leaseTimeout - Lease timeout in milliseconds (default: 5 minutes)
+ * @returns Number of tasks released
+ */
+export function cleanupStaleClaims(leaseTimeout?: number): number {
+  return cleanupStaleClaimsInternal(leaseTimeout);
+}
+
+/**
+ * Check if there are pending tasks
+ *
+ * @returns true if there are tasks waiting to be claimed
+ */
+export function hasPendingWork(): boolean {
+  return hasPendingTasks();
+}
+
+/**
+ * Check if all tasks are complete
+ *
+ * @returns true if all tasks are done or failed
+ */
+export function isSwarmComplete(): boolean {
+  return allTasksComplete();
+}
+
+/**
+ * Get the number of active agents
+ *
+ * @returns Number of agents with recent heartbeats
+ */
+export function getActiveAgents(): number {
+  return getActiveAgentCount();
+}
+
+/**
+ * Get all tasks
+ *
+ * @returns Array of all tasks in the swarm
+ */
+export function getAllTasks(): SwarmTask[] {
+  return getTasks();
+}
+
+/**
+ * Get tasks by status
+ *
+ * @param status - Task status to filter by
+ * @returns Array of tasks with the given status
+ */
+export function getTasksWithStatus(status: SwarmTask['status']): SwarmTask[] {
+  return getTasksByStatus(status);
+}
+
+/**
+ * Get a specific task
+ *
+ * @param taskId - Task ID to retrieve
+ * @returns Task or null if not found
+ */
+export function getTaskById(taskId: string): SwarmTask | null {
+  return getTask(taskId);
+}
+
+/**
+ * Get tasks claimed by a specific agent
+ *
+ * @param agentId - Agent to query
+ * @returns Array of tasks claimed by the agent
+ */
+export function getAgentTasks(agentId: string): SwarmTask[] {
+  return getTasksClaimedBy(agentId);
+}
+
+/**
+ * Get all agent heartbeats
+ *
+ * @returns Array of agent heartbeat records
+ */
+export function getAllHeartbeats(): AgentHeartbeat[] {
+  return getHeartbeats();
+}
+
+/**
+ * Retry a failed task
+ *
+ * @param agentId - Agent attempting to retry
+ * @param taskId - Failed task to retry
+ * @returns ClaimResult
+ */
+export function retryTask(agentId: string, taskId: string): ClaimResult {
+  return reclaimFailedTask(agentId, taskId);
+}
+
+/**
+ * Check if swarm database is initialized
+ *
+ * @returns true if database is ready
+ */
+export function isSwarmReady(): boolean {
+  return isDbInitialized();
+}
+
+/**
+ * Initialize database without starting a swarm
+ *
+ * Useful for agents that join an existing swarm.
+ *
+ * @param cwd - Working directory
+ * @returns true if database was initialized
+ */
+export async function connectToSwarm(cwd: string): Promise<boolean> {
+  if (isDbInitialized()) {
+    return true;
+  }
+
+  const success = await initDb(cwd);
+  if (success) {
+    currentCwd = cwd;
+  }
+  return success;
+}
+
+/**
+ * Disconnect from swarm without stopping it
+ *
+ * @returns true if disconnected successfully
+ */
+export function disconnectFromSwarm(): boolean {
+  closeDb();
+  currentCwd = null;
+  return true;
+}
+
+// Re-export types
+export type {
+  SwarmTask,
+  SwarmState,
+  SwarmConfig,
+  SwarmStats,
+  ClaimResult,
+  AgentHeartbeat
+} from './types.js';
+
+export { DEFAULT_SWARM_CONFIG } from './types.js';
