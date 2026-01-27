@@ -1,3 +1,29 @@
+---
+title: Oh-My-ClaudeCode
+subtitle: Multi-Agent Orchestration for Autonomous Development
+author: Yeachan Heo
+theme: night
+---
+
+# Oh-My-ClaudeCode
+
+**Multi-Agent Orchestration for Autonomous Development**
+
+---
+
+# 🎭 Let's Start with a LIVE Demo
+
+**You tell me what to build, I'll build it in 10 minutes.**
+
+What do you need?
+- Todo app?
+- Weather dashboard?
+- Real-time poll?
+- Mini game?
+
+*Drop your idea in the chat!*
+
+---
 # oh-my-claudecode: Multi-Agent Orchestration for Claude Code
 
 ## Zero learning curve. Maximum power.
