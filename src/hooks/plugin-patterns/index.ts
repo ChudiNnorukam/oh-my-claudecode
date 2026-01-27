@@ -11,7 +11,7 @@
 
 import { existsSync, readFileSync } from 'fs';
 import { join, extname } from 'path';
-import { execFileSync, execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 // =============================================================================
 // SECURITY VALIDATION HELPERS
@@ -313,7 +313,7 @@ export function runTests(directory: string): { success: boolean; message: string
     try {
       const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
       if (pkg.scripts?.test) {
-        execSync('npm test', { cwd: directory, encoding: 'utf-8', stdio: 'pipe' });
+        execFileSync('npm', ['test'], { cwd: directory, encoding: 'utf-8', stdio: 'pipe' });
         return { success: true, message: 'Tests passed' };
       }
     } catch (_error) {
@@ -324,7 +324,7 @@ export function runTests(directory: string): { success: boolean; message: string
   // Check for pytest
   if (existsSync(join(directory, 'pytest.ini')) || existsSync(join(directory, 'pyproject.toml'))) {
     try {
-      execSync('pytest', { cwd: directory, encoding: 'utf-8', stdio: 'pipe' });
+      execFileSync('pytest', [], { cwd: directory, encoding: 'utf-8', stdio: 'pipe' });
       return { success: true, message: 'Tests passed' };
     } catch (_error) {
       return { success: false, message: 'Tests failed' };
