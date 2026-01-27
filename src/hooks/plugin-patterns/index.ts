@@ -11,7 +11,40 @@
 
 import { existsSync, readFileSync } from 'fs';
 import { join, extname } from 'path';
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
+
+// =============================================================================
+// SECURITY VALIDATION HELPERS
+// =============================================================================
+
+/**
+ * Validate binary name to prevent command injection
+ * Only allows alphanumeric characters, hyphens, underscores, and dots
+ */
+function isValidBinaryName(binary: string): boolean {
+  return /^[a-zA-Z0-9._-]+$/.test(binary);
+}
+
+/**
+ * Parse a command string into binary and arguments array
+ */
+function parseCommand(command: string): { binary: string; args: string[] } {
+  const parts = command.split(/\s+/);
+  return {
+    binary: parts[0],
+    args: parts.slice(1)
+  };
+}
+
+/**
+ * Validate file path to prevent command injection
+ * Rejects shell metacharacters that could be used for injection
+ */
+function isValidFilePath(filePath: string): boolean {
+  // Reject common shell metacharacters
+  const dangerousChars = /[;|&`$(){}[\]<>!#*?\\\n\r]/;
+  return !dangerousChars.test(filePath);
+}
 
 // =============================================================================
 // AUTO-FORMAT PATTERN
@@ -52,9 +85,12 @@ export function getFormatter(ext: string): string | null {
  */
 export function isFormatterAvailable(command: string): boolean {
   try {
-    const binary = command.split(' ')[0];
+    const { binary } = parseCommand(command);
+    if (!isValidBinaryName(binary)) {
+      return false;
+    }
     const checkCommand = process.platform === 'win32' ? 'where' : 'which';
-    execSync(`${checkCommand} ${binary}`, { encoding: 'utf-8', stdio: 'pipe' });
+    execFileSync(checkCommand, [binary], { encoding: 'utf-8', stdio: 'pipe' });
     return true;
   } catch {
     return false;
@@ -76,8 +112,13 @@ export function formatFile(filePath: string): { success: boolean; message: strin
     return { success: true, message: `Formatter ${formatter} not available` };
   }
 
+  if (!isValidFilePath(filePath)) {
+    return { success: false, message: `Invalid file path: contains disallowed characters` };
+  }
+
   try {
-    execSync(`${formatter} "${filePath}"`, { encoding: 'utf-8', stdio: 'pipe' });
+    const { binary, args } = parseCommand(formatter);
+    execFileSync(binary, [...args, filePath], { encoding: 'utf-8', stdio: 'pipe' });
     return { success: true, message: `Formatted ${filePath}` };
   } catch (_error) {
     return { success: false, message: `Format failed: ${_error}` };
@@ -125,16 +166,24 @@ export function lintFile(filePath: string): { success: boolean; message: string 
     return { success: true, message: `No linter configured for ${ext}` };
   }
 
+  const { binary, args } = parseCommand(linter);
+  if (!isValidBinaryName(binary)) {
+    return { success: false, message: `Invalid linter binary name` };
+  }
+
   try {
-    const binary = linter.split(' ')[0];
     const checkCommand = process.platform === 'win32' ? 'where' : 'which';
-    execSync(`${checkCommand} ${binary}`, { encoding: 'utf-8', stdio: 'pipe' });
+    execFileSync(checkCommand, [binary], { encoding: 'utf-8', stdio: 'pipe' });
   } catch {
     return { success: true, message: `Linter ${linter} not available` };
   }
 
+  if (!isValidFilePath(filePath)) {
+    return { success: false, message: `Invalid file path: contains disallowed characters` };
+  }
+
   try {
-    execSync(`${linter} "${filePath}"`, { encoding: 'utf-8', stdio: 'pipe' });
+    execFileSync(binary, [...args, filePath], { encoding: 'utf-8', stdio: 'pipe' });
     return { success: true, message: `Lint passed for ${filePath}` };
   } catch (_error) {
     return { success: false, message: `Lint errors in ${filePath}` };
@@ -237,13 +286,13 @@ export function runTypeCheck(directory: string): { success: boolean; message: st
 
   try {
     const checkCommand = process.platform === 'win32' ? 'where' : 'which';
-    execSync(`${checkCommand} tsc`, { encoding: 'utf-8', stdio: 'pipe' });
+    execFileSync(checkCommand, ['tsc'], { encoding: 'utf-8', stdio: 'pipe' });
   } catch {
     return { success: true, message: 'TypeScript not installed' };
   }
 
   try {
-    execSync('tsc --noEmit', { cwd: directory, encoding: 'utf-8', stdio: 'pipe' });
+    execFileSync('tsc', ['--noEmit'], { cwd: directory, encoding: 'utf-8', stdio: 'pipe' });
     return { success: true, message: 'Type check passed' };
   } catch (_error) {
     return { success: false, message: 'Type errors found' };
