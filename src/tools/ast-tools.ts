@@ -47,6 +47,13 @@ function toLangEnum(
     css: sg.Lang.Css,
     json: sg.Lang.Json,
     yaml: sg.Lang.Yaml,
+    bash: sg.Lang.Bash,
+    elixir: sg.Lang.Elixir,
+    haskell: sg.Lang.Haskell,
+    lua: sg.Lang.Lua,
+    php: sg.Lang.Php,
+    scala: sg.Lang.Scala,
+    sql: sg.Lang.Sql,
   };
 
   const lang = langMap[language];
@@ -87,6 +94,13 @@ export const SUPPORTED_LANGUAGES: [string, ...string[]] = [
   "css",
   "json",
   "yaml",
+  "bash",
+  "elixir",
+  "haskell",
+  "lua",
+  "php",
+  "scala",
+  "sql",
 ];
 
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
@@ -124,6 +138,19 @@ const EXT_TO_LANG: Record<string, string> = {
   ".json": "json",
   ".yaml": "yaml",
   ".yml": "yaml",
+  ".sh": "bash",
+  ".bash": "bash",
+  ".zsh": "bash",
+  ".ex": "elixir",
+  ".exs": "elixir",
+  ".hs": "haskell",
+  ".lhs": "haskell",
+  ".lua": "lua",
+  ".php": "php",
+  ".phtml": "php",
+  ".scala": "scala",
+  ".sc": "scala",
+  ".sql": "sql",
 };
 
 /**
