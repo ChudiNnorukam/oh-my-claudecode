@@ -5,141 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.7.7] - 2026-01-28
+## [3.7.8] - 2026-01-28
 
 ### Added
 
-#### LSP/AST Agent Wiring
+#### SDK MCP Server for Custom Tools (Major Feature)
+In-process MCP server exposing 15 custom tools to Claude Code subagents via the Claude Agent SDK.
 
-Wire LSP and AST tools into the agent system so agents can actually use them at runtime. PR #182.
+- **OMC Tools Server** (`src/mcp/omc-tools-server.ts`)
+  - Uses `createSdkMcpServer` and `tool` helpers from `@anthropic-ai/claude-agent-sdk`
+  - Exposes tools in MCP format as `mcp__omc-tools__<tool_name>`
+  - Zero external process overhead - runs in-process
+  - Configurable tool filtering via `getOmcToolNames()`
 
-- **Session-level**: Added 12 LSP tools and 2 AST tools to `allowedTools` array
-  - Opt-out via `config.features.lspTools = false` or `config.features.astTools = false`
-  - Enabled by default (backward compatible)
+- **15 Custom Tools Exposed**
+  - **12 LSP Tools**: `lsp_hover`, `lsp_definition`, `lsp_references`, `lsp_completion`, `lsp_signature_help`, `lsp_rename`, `lsp_code_actions`, `lsp_formatting`, `lsp_symbols`, `lsp_diagnostics`, `lsp_diagnostics_directory`, `lsp_semantic_tokens`
+  - **2 AST Tools**: `ast_query`, `ast_query_multi`
+  - **1 Python Tool**: `python_repl` (persistent REPL with session management)
 
-- **Agent-level**: Updated 17 agents with appropriate LSP/AST tools:
-  | Agent | Tools Added |
-  |-------|-------------|
-  | architect, architect-medium | `lsp_diagnostics`, `lsp_diagnostics_directory`, `ast_grep_search` |
-  | architect-low | `lsp_diagnostics` |
-  | executor, executor-high | `lsp_diagnostics`, `lsp_diagnostics_directory`, `ast_grep_search`, `ast_grep_replace` |
-  | executor-low | `lsp_diagnostics` |
-  | explore, explore-medium | `ast_grep_search`, `lsp_document_symbols`, `lsp_workspace_symbols` |
-  | explore-high | + `lsp_find_references` |
-  | build-fixer, build-fixer-low | `lsp_diagnostics`, `lsp_diagnostics_directory` |
-  | tdd-guide, tdd-guide-low | `lsp_diagnostics` |
-  | code-reviewer | `lsp_diagnostics`, `ast_grep_search` |
-  | code-reviewer-low | `lsp_diagnostics` |
-  | qa-tester, qa-tester-high | `lsp_diagnostics` |
-
-### Fixed
-
-- Resolved prompt-tool mismatch where agent prompts referenced `lsp_diagnostics` and `ast_grep_search` but tool arrays did not include them
-
-## [3.7.6] - 2026-01-28
-
-### Added
-
-#### Multi-Language Diagnostics Expansion (Major Feature)
-
-Comprehensive language support expansion for LSP, AST, and directory diagnostics tools. PR #178.
-
-##### 11 New LSP Server Configurations
-| Language | Server | Extensions |
-|----------|--------|------------|
-| Ruby | solargraph | `.rb`, `.rake`, `.gemspec` |
-| PHP | intelephense | `.php`, `.phtml` |
-| Lua | lua-language-server | `.lua` |
-| Bash | bash-language-server | `.sh`, `.bash` |
-| Elixir | elixir-ls | `.ex`, `.exs` |
-| Kotlin | kotlin-language-server | `.kt`, `.kts` |
-| Swift | sourcekit-lsp | `.swift` |
-| C# | OmniSharp | `.cs` |
-| Scala | metals | `.scala`, `.sc` |
-| Zig | zls | `.zig` |
-| Haskell | haskell-language-server | `.hs`, `.lhs` |
-
-##### 7 New AST Languages (ast-grep)
-- Bash, Elixir, Haskell, Lua, PHP, Scala, SQL
-- Total ast-grep languages: 24
-
-##### 4 New Diagnostic Strategies
-| Strategy | Tool | Config File |
-|----------|------|-------------|
-| `tsc` | TypeScript compiler | `tsconfig.json` |
-| `go` | go vet | `go.mod` |
-| `rust` | cargo check | `Cargo.toml` |
-| `python` | mypy/pylint | `pyproject.toml`, `requirements.txt`, `setup.py` |
-
-- Auto-detection via `strategy: 'auto'` (default)
-- Fallback to LSP iteration for unknown project types
-- All runners use `execFileSync` (no shell injection risk)
-- 5-minute timeout enforcement across all runners
+- **Session Integration**
+  - Tools automatically added to session's `allowedTools`
+  - MCP server registered in session's `mcpServers` config
+  - Feature flags for LSP/AST/Python tool inclusion
 
 ### Changed
 
-#### Rust Diagnostic Parser Rewrite
-- **JSON output format**: Switched from regex to `--message-format=json` for reliable parsing
-- **Multi-line support**: JSON parsing correctly handles complex cargo output with note blocks
-- **CRLF handling**: Windows line endings handled via `line.trim()` before `JSON.parse()`
-
-#### Code Quality Improvements
-- **DRY refactor**: Extracted `makeSkippedResult()` helper replacing 7 duplicated blocks in `index.ts`
-- **Type safety**: `EXT_TO_LANG` now typed as `Record<string, LanguageKey>` for compile-time validation
-- **Unused variable fix**: `Object.values()` in `servers.ts` instead of `Object.entries()` with unused `_`
-
-### Fixed
-
-#### Security & Robustness (Conservative Review Findings)
-
-1. **Circular Dependency** - Extracted `EXTERNAL_PROCESS_TIMEOUT_MS` and `LSP_DIAGNOSTICS_WAIT_MS` to new `constants.ts` file
-2. **ENOENT Handling** - All 5 runners now handle missing binary gracefully with `skipped` message:
-   - `tsc` binary not found in PATH
-   - `go` binary not found in PATH
-   - `cargo` binary not found in PATH
-   - `mypy` binary not found in PATH
-   - `pylint` binary not found in PATH
-3. **Skipped Field Consistency** - `TscResult` now includes `skipped?: string` matching other runners
-4. **Empty Output Detection** - TSC runner detects crashed compiler with no output (synthetic `tsc-crash` diagnostic)
-5. **Missing Manifest Messages** - All runners return informative `skipped` messages when project files missing
-6. **LSP Language ID Mappings** - Added missing mappings: `pyw→python`, `cxx→cpp`, `hxx→cpp`, `less→less`
-7. **Integration Test Fix** - Fixed async mock issue in `integration.test.ts` (`await vi.importActual` moved outside mock)
-8. **stdout/stderr Ordering** - Rust runner reads `stdout` first for JSON mode (was `stderr`)
-
-### Testing
-
-- **31 new diagnostic tests** (parsers, integration, detectProjectType)
-- **62 edge case validations** (CRLF, Unicode, Windows paths, malformed input)
-- All tests pass with comprehensive coverage
+- **Agent Definitions** (`src/agents/definitions.ts`)
+  - Relevant agents (architect, executor, explore, qa-tester) now have LSP/AST tools in their tool arrays
+  - Enables IDE-like capabilities for agent analysis and modification tasks
 
 ### Technical Details
 
 **New Files:**
-- `src/tools/diagnostics/constants.ts` - Shared timeout constants
-- `src/tools/diagnostics/go-runner.ts` - Go vet runner (98 lines)
-- `src/tools/diagnostics/rust-runner.ts` - Cargo check runner (129 lines)
-- `src/tools/diagnostics/python-runner.ts` - Mypy/Pylint runner (231 lines)
-- `src/tools/diagnostics/__tests__/parsers.test.ts` - Parser unit tests (224 lines)
-- `src/tools/diagnostics/__tests__/detectProjectType.test.ts` - Project detection tests
-- `src/tools/diagnostics/__tests__/integration.test.ts` - Integration tests
+- `src/mcp/omc-tools-server.ts` - SDK MCP server implementation
+- `src/__tests__/omc-tools-server.test.ts` - 10 tests for tool exposure
 
-**Files Modified:**
-- `src/tools/diagnostics/index.ts` - Multi-strategy dispatch (+265 lines)
-- `src/tools/diagnostics/tsc-runner.ts` - ENOENT handling (+30 lines)
-- `src/tools/diagnostics/lsp-aggregator.ts` - Dynamic extensions (+37 lines)
-- `src/tools/lsp/servers.ts` - 11 new server configs (+114 lines)
-- `src/tools/lsp/client.ts` - Language ID mappings (+23 lines)
-- `src/tools/ast-tools.ts` - 7 new languages (+64 lines)
-
-**Lines Changed:** +1,300 (14 files)
+**Usage:**
+```typescript
+// Tools available to subagents as:
+mcp__omc-tools__lsp_hover
+mcp__omc-tools__lsp_definition
+mcp__omc-tools__ast_query
+mcp__omc-tools__python_repl
+// ... etc
+```
 
 ---
 
-## [3.7.5] - 2026-01-28
+## [3.7.7] - 2026-01-28
 
-### Fixed
+### Changed
 
-- **Hooks System**: Fix hook execution order and async handling
+- **LSP/AST Tools Wired into Agent Definitions**
+  - Architect, executor, explore, and qa-tester agents now have LSP/AST tools in their tool arrays
+  - Enables IDE-like code intelligence for relevant agent tasks
 
 ---
 
@@ -148,10 +67,6 @@ Comprehensive language support expansion for LSP, AST, and directory diagnostics
 ### Changed
 
 - **Language-Agnostic Agent Prompts** (#174)
-
-### Breaking Changes
-
-- **Diagnostics Strategy Selection** - `lsp_diagnostics_directory` with explicit `strategy` parameter no longer falls back to 'lsp' when requested strategy's config file is missing. Runners now handle missing configs gracefully with error messages. Use `strategy: 'auto'` (default) for auto-detection with fallback.
   - build-fixer: Multi-language build/type check commands (TypeScript, Python, Go, Rust, Java)
   - tdd-guide: Framework-agnostic test examples and coverage commands
   - security-reviewer: Multi-language vulnerability patterns and dependency audit commands
