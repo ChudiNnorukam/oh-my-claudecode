@@ -114,6 +114,57 @@ function countIncompleteTodos(todosDir, projectDir) {
   return count;
 }
 
+/**
+ * Detect if stop was triggered by context-limit related reasons.
+ * When context is exhausted, Claude Code needs to stop so it can compact.
+ * Blocking these stops causes a deadlock: can't compact because can't stop,
+ * can't continue because context is full.
+ *
+ * See: https://github.com/Yeachan-Heo/oh-my-claudecode/issues/213
+ */
+function isContextLimitStop(data) {
+  const reason = (data.stop_reason || data.stopReason || '').toLowerCase();
+
+  // Known context-limit patterns (both confirmed and defensive)
+  const contextPatterns = [
+    'context_limit',
+    'context_window',
+    'context_exceeded',
+    'context_full',
+    'max_context',
+    'token_limit',
+    'max_tokens',
+    'conversation_too_long',
+    'input_too_long',
+  ];
+
+  if (contextPatterns.some(p => reason.includes(p))) {
+    return true;
+  }
+
+  // Also check end_turn_reason (API-level field)
+  const endTurnReason = (data.end_turn_reason || data.endTurnReason || '').toLowerCase();
+  if (endTurnReason && contextPatterns.some(p => endTurnReason.includes(p))) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Detect if stop was triggered by user abort (Ctrl+C, cancel button, etc.)
+ */
+function isUserAbort(data) {
+  if (data.user_requested || data.userRequested) return true;
+
+  const reason = (data.stop_reason || data.stopReason || '').toLowerCase();
+  const abortPatterns = [
+    'user_cancel', 'user_interrupt', 'ctrl_c', 'manual_stop',
+    'aborted', 'abort', 'cancel', 'interrupt',
+  ];
+  return abortPatterns.some(p => reason.includes(p));
+}
+
 async function main() {
   try {
     const input = await readStdin();
@@ -125,6 +176,20 @@ async function main() {
     const todosDir = join(homedir(), '.claude', 'todos');
     const stateDir = join(directory, '.omc', 'state');
     const globalStateDir = join(homedir(), '.omc', 'state');
+
+    // CRITICAL: Never block context-limit stops.
+    // Blocking these causes a deadlock where Claude Code cannot compact.
+    // See: https://github.com/Yeachan-Heo/oh-my-claudecode/issues/213
+    if (isContextLimitStop(data)) {
+      console.log(JSON.stringify({ continue: true }));
+      return;
+    }
+
+    // Respect user abort (Ctrl+C, cancel)
+    if (isUserAbort(data)) {
+      console.log(JSON.stringify({ continue: true }));
+      return;
+    }
 
     // Read all mode states (local-first with fallback to global)
     const ralph = readStateFile(stateDir, globalStateDir, 'ralph-state.json');

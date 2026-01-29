@@ -6,7 +6,7 @@
  * Cross-platform: Windows, macOS, Linux
  *
  * Supported keywords (in priority order):
- * 1. cancel: Stop active modes
+ * 1. cancelomc/stopomc: Stop active modes
  * 2. ralph: Persistence mode until task completion
  * 3. autopilot: Full autonomous execution
  * 4. ultrapilot: Parallel autopilot
@@ -172,7 +172,9 @@ async function main() {
     // Priority order: cancel > ralph > autopilot > ultrapilot > ultrawork > ecomode > swarm > pipeline > ralplan > plan > tdd > research > ultrathink > deepsearch > analyze
 
     // Priority 1: Cancel (BEFORE other modes - clears states)
-    if (/\b(stop|cancel|abort)\b/i.test(cleanPrompt)) {
+    // Use specific keywords to avoid false positives from natural language
+    // (e.g., "don't let it stop the context" or URLs containing "cancel")
+    if (/\b(cancelomc|stopomc)\b/i.test(cleanPrompt)) {
       // Special: clear state files instead of creating them
       clearStateFiles(directory, ['ralph', 'autopilot', 'ultrapilot', 'ultrawork', 'ecomode', 'swarm', 'pipeline']);
       console.log(JSON.stringify(createHookOutput(createSkillInvocation('cancel', prompt))));

@@ -103,7 +103,7 @@ When you detect these patterns, you MUST invoke the corresponding skill:
 | "research", "analyze data", "statistics" | `research` |
 | "tdd", "test first", "red green" | `tdd` |
 | "setup mcp", "configure mcp" | `mcp-setup` |
-| "stop", "cancel", "abort" | `cancel` (unified) |
+| "cancelomc", "stopomc" | `cancel` (unified) |
 
 **Keyword Conflict Resolution:**
 - Explicit mode keywords (`ulw`, `ultrawork`, `eco`, `ecomode`) ALWAYS override defaults
@@ -214,7 +214,7 @@ Users don't need to learn commands. You detect intent and activate behaviors aut
 | "don't stop until done" | Activate ralph-loop for persistence |
 | UI/frontend work | Activate design sensibility + delegate to designer |
 | "fast" / "parallel" | Activate default execution mode (ultrawork or ecomode per config) |
-| "stop" / "cancel" | Intelligently stop current operation |
+| "cancelomc" / "stopomc" | Intelligently stop current operation |
 
 ### Magic Keywords (Optional Shortcuts)
 
@@ -231,7 +231,7 @@ Users don't need to learn commands. You detect intent and activate behaviors aut
 
 ### Stopping and Cancelling
 
-User says "stop", "cancel", "abort" → Invoke unified `cancel` skill (automatically detects active mode):
+User says "cancelomc", "stopomc" → Invoke unified `cancel` skill (automatically detects active mode):
 - Detects and cancels: autopilot, ultrapilot, ralph, ultrawork, ultraqa, swarm, pipeline
 - In planning → end interview
 - Unclear → ask user
@@ -268,7 +268,7 @@ User says "stop", "cancel", "abort" → Invoke unified `cancel` skill (automatic
 | `ultrapilot` | Parallel autopilot (3-5x faster) | "ultrapilot", "parallel build", "swarm build" | `/oh-my-claudecode:ultrapilot` |
 | `swarm` | N coordinated agents with task claiming | "swarm N agents" | `/oh-my-claudecode:swarm` |
 | `pipeline` | Sequential agent chaining | "pipeline", "chain" | `/oh-my-claudecode:pipeline` |
-| `cancel` | Unified cancellation for all modes | "stop", "cancel" | `/oh-my-claudecode:cancel` |
+| `cancel` | Unified cancellation for all modes | "cancelomc", "stopomc" | `/oh-my-claudecode:cancel` |
 | `ecomode` | Token-efficient parallel execution | "eco", "efficient", "budget" | `/oh-my-claudecode:ecomode` |
 | `research` | Parallel scientist orchestration | "research", "analyze data", "statistics" | `/oh-my-claudecode:research` |
 | `tdd` | TDD enforcement: test-first development | "tdd", "test first" | `/oh-my-claudecode:tdd` |
@@ -511,7 +511,7 @@ Sequential agent chaining with data passing between stages.
 
 Smart cancellation that auto-detects active mode.
 
-**Usage:** `/cancel` or just say "stop", "cancel", "abort"
+**Usage:** `/cancel` or just say "cancelomc", "stopomc"
 
 Auto-detects and cancels: autopilot, ultrapilot, ralph, ultrawork, ultraqa, ecomode, swarm, pipeline
 Use `--force` or `--all` to clear ALL states.
