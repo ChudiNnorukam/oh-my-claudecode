@@ -23,7 +23,7 @@ import {
   getArchitectVerificationPrompt,
   clearVerificationState
 } from './ralph/index.js';
-import { checkIncompleteTodos, StopContext } from './todo-continuation/index.js';
+import { checkIncompleteTodos, StopContext, isContextLimitStop, isUserAbort } from './todo-continuation/index.js';
 import { checkPersistentModes, createHookOutput } from './persistent-mode/index.js';
 import { activateUltrawork, readUltraworkState } from './ultrawork/index.js';
 import {
@@ -239,7 +239,17 @@ async function processStopContinuation(input: HookInput): Promise<HookOutput> {
     userRequested: (input as Record<string, unknown>).userRequested as boolean | undefined,
   };
 
-  // Check for incomplete todos (respects user abort)
+  // Never block context-limit stops (causes deadlock - issue #213)
+  if (isContextLimitStop(stopContext)) {
+    return { continue: true };
+  }
+
+  // Respect user abort
+  if (isUserAbort(stopContext)) {
+    return { continue: true };
+  }
+
+  // Check for incomplete todos
   const incompleteTodos = await checkIncompleteTodos(sessionId, directory, stopContext);
 
   if (incompleteTodos.count > 0) {

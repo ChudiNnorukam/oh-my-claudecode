@@ -164,6 +164,28 @@ export function isUserAbort(context?: StopContext): boolean {
 }
 
 /**
+ * Detect if stop was triggered by context-limit related reasons.
+ * When context is exhausted, Claude Code needs to stop so it can compact.
+ * Blocking these stops causes a deadlock: can't compact because can't stop,
+ * can't continue because context is full.
+ *
+ * See: https://github.com/Yeachan-Heo/oh-my-claudecode/issues/213
+ */
+export function isContextLimitStop(context?: StopContext): boolean {
+  if (!context) return false;
+
+  const reason = (context.stop_reason ?? context.stopReason ?? '').toLowerCase();
+  const endTurnReason = (context.end_turn_reason ?? context.endTurnReason ?? '').toLowerCase();
+
+  const contextPatterns = [
+    'context_limit', 'context_window', 'context_exceeded', 'context_full',
+    'max_context', 'token_limit', 'max_tokens', 'conversation_too_long', 'input_too_long'
+  ];
+
+  return contextPatterns.some(p => reason.includes(p) || endTurnReason.includes(p));
+}
+
+/**
  * Get possible todo file locations
  */
 function getTodoFilePaths(sessionId?: string, directory?: string): string[] {

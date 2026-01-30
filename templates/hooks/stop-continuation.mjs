@@ -58,6 +58,30 @@ async function readStdin() {
   return Buffer.concat(chunks).toString('utf-8');
 }
 
+/**
+ * Detect if stop was triggered by context-limit related reasons.
+ * See: https://github.com/Yeachan-Heo/oh-my-claudecode/issues/213
+ */
+function isContextLimitStop(data) {
+  const reason = (data.stop_reason || data.stopReason || '').toLowerCase();
+  const endTurnReason = (data.end_turn_reason || data.endTurnReason || '').toLowerCase();
+  const contextPatterns = [
+    'context_limit', 'context_window', 'context_exceeded', 'context_full',
+    'max_context', 'token_limit', 'max_tokens', 'conversation_too_long', 'input_too_long',
+  ];
+  return contextPatterns.some(p => reason.includes(p) || endTurnReason.includes(p));
+}
+
+function isUserAbort(data) {
+  if (data.user_requested || data.userRequested) return true;
+  const reason = (data.stop_reason || data.stopReason || '').toLowerCase();
+  const abortPatterns = [
+    'user_cancel', 'user_interrupt', 'ctrl_c', 'manual_stop',
+    'aborted', 'abort', 'cancel', 'interrupt',
+  ];
+  return abortPatterns.some(p => reason.includes(p));
+}
+
 // Main
 async function main() {
   try {
@@ -69,6 +93,12 @@ async function main() {
     try {
       data = JSON.parse(input);
     } catch { /* invalid JSON - continue with empty data */ }
+
+    // Never block context-limit or user-abort stops
+    if (isContextLimitStop(data) || isUserAbort(data)) {
+      console.log(JSON.stringify({ continue: true }));
+      return;
+    }
 
     const sessionId = data.sessionId || data.session_id || '';
 

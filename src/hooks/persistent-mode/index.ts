@@ -35,7 +35,7 @@ import {
   detectArchitectRejection,
   clearVerificationState
 } from '../ralph/index.js';
-import { checkIncompleteTodos, getNextPendingTodo, StopContext, isUserAbort } from '../todo-continuation/index.js';
+import { checkIncompleteTodos, getNextPendingTodo, StopContext, isUserAbort, isContextLimitStop } from '../todo-continuation/index.js';
 import { TODO_CONTINUATION_PROMPT } from '../../installer/hooks.js';
 import {
   isAutopilotActive
@@ -335,17 +335,8 @@ async function checkUltrawork(
     return null;
   }
 
-  // If no incomplete todos, ultrawork can complete
-  if (!hasIncompleteTodos) {
-    deactivateUltrawork(directory);
-    return {
-      shouldBlock: false,
-      message: `[ULTRAWORK COMPLETE] All tasks finished. Ultrawork mode deactivated. Well done!`,
-      mode: 'none'
-    };
-  }
-
-  // Reinforce ultrawork mode
+  // Reinforce ultrawork mode - ALWAYS continue while active.
+  // This prevents false stops from bash errors, transient failures, etc.
   const newState = incrementReinforcement(directory);
   if (!newState) {
     return null;
@@ -444,7 +435,18 @@ export async function checkPersistentModes(
 ): Promise<PersistentModeResult> {
   const workingDir = directory || process.cwd();
 
-  // Check for user abort first - skip all continuation enforcement
+  // CRITICAL: Never block context-limit stops.
+  // Blocking these causes a deadlock where Claude Code cannot compact.
+  // See: https://github.com/Yeachan-Heo/oh-my-claudecode/issues/213
+  if (isContextLimitStop(stopContext)) {
+    return {
+      shouldBlock: false,
+      message: '',
+      mode: 'none'
+    };
+  }
+
+  // Check for user abort - skip all continuation enforcement
   if (isUserAbort(stopContext)) {
     return {
       shouldBlock: false,

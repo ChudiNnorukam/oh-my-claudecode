@@ -216,14 +216,14 @@ describe('Keyword Detector', () => {
 
     // New keyword types tests
     it('should detect cancel keyword', () => {
-      const detected = detectKeywordsWithType('stop this task');
+      const detected = detectKeywordsWithType('cancelomc this task');
       expect(detected).toHaveLength(1);
       expect(detected[0].type).toBe('cancel');
-      expect(detected[0].keyword).toBe('stop');
+      expect(detected[0].keyword).toBe('cancelomc');
     });
 
     it('should detect cancel keyword variations', () => {
-      const cancelTerms = ['stop', 'cancel', 'abort'];
+      const cancelTerms = ['cancelomc', 'stopomc'];
       for (const term of cancelTerms) {
         const detected = detectKeywordsWithType(`Please ${term} the process`);
         expect(detected).toHaveLength(1);
@@ -504,19 +504,19 @@ describe('Keyword Detector', () => {
 
     // New priority tests for new keywords
     it('should give cancel highest priority', () => {
-      const primary = getPrimaryKeyword('stop searching for files');
+      const primary = getPrimaryKeyword('stopomc searching for files');
       expect(primary).not.toBeNull();
       expect(primary!.type).toBe('cancel');
     });
 
     it('should give cancel priority over analyze', () => {
-      const primary = getPrimaryKeyword('cancel this investigation');
+      const primary = getPrimaryKeyword('cancelomc this investigation');
       expect(primary).not.toBeNull();
       expect(primary!.type).toBe('cancel');
     });
 
     it('should prioritize cancel over all other keywords', () => {
-      const primary = getPrimaryKeyword('stop ultrawork and search');
+      const primary = getPrimaryKeyword('stopomc ultrawork and search');
       expect(primary).not.toBeNull();
       expect(primary!.type).toBe('cancel');
     });

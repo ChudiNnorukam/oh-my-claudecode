@@ -316,15 +316,16 @@ async function main() {
       }
     }
 
-    // Priority 7: Ultrawork with incomplete todos/tasks
-    if (ultrawork.state?.active && totalIncomplete > 0) {
+    // Priority 7: Ultrawork - ALWAYS continue while active (not just when tasks exist)
+    // This prevents false stops from bash errors, transient failures, etc.
+    if (ultrawork.state?.active) {
       const newCount = (ultrawork.state.reinforcement_count || 0) + 1;
-      const maxReinforcements = ultrawork.state.max_reinforcements || 15;
+      const maxReinforcements = ultrawork.state.max_reinforcements || 50;
 
       if (newCount > maxReinforcements) {
         console.log(JSON.stringify({
           continue: true,
-          reason: `[ULTRAWORK ESCAPE] Max reinforcements reached. Allowing stop.`
+          reason: `[ULTRAWORK ESCAPE] Max reinforcements (${maxReinforcements}) reached. Allowing stop.`
         }));
         return;
       }
@@ -333,23 +334,32 @@ async function main() {
       ultrawork.state.last_checked_at = new Date().toISOString();
       writeJsonFile(ultrawork.path, ultrawork.state);
 
-      const itemType = taskCount > 0 ? 'Tasks' : 'todos';
+      // Build continuation message
+      let reason = `[ULTRAWORK #${newCount}] Mode active - continue working.`;
+      if (totalIncomplete > 0) {
+        const itemType = taskCount > 0 ? 'Tasks' : 'todos';
+        reason = `[ULTRAWORK #${newCount}] ${totalIncomplete} incomplete ${itemType}. Continue working.`;
+      }
+      if (ultrawork.state.original_prompt) {
+        reason += `\nTask: ${ultrawork.state.original_prompt}`;
+      }
+
       console.log(JSON.stringify({
         continue: false,
-        reason: `[ULTRAWORK #${newCount}] ${totalIncomplete} incomplete ${itemType}. Continue working.\n${ultrawork.state.original_prompt ? `Task: ${ultrawork.state.original_prompt}` : ''}`
+        reason
       }));
       return;
     }
 
-    // Priority 8: Ecomode with incomplete todos/tasks
-    if (ecomode.state?.active && totalIncomplete > 0) {
+    // Priority 8: Ecomode - ALWAYS continue while active
+    if (ecomode.state?.active) {
       const newCount = (ecomode.state.reinforcement_count || 0) + 1;
-      const maxReinforcements = ecomode.state.max_reinforcements || 15;
+      const maxReinforcements = ecomode.state.max_reinforcements || 50;
 
       if (newCount > maxReinforcements) {
         console.log(JSON.stringify({
           continue: true,
-          reason: `[ECOMODE ESCAPE] Max reinforcements reached. Allowing stop.`
+          reason: `[ECOMODE ESCAPE] Max reinforcements (${maxReinforcements}) reached. Allowing stop.`
         }));
         return;
       }
@@ -357,10 +367,15 @@ async function main() {
       ecomode.state.reinforcement_count = newCount;
       writeJsonFile(ecomode.path, ecomode.state);
 
-      const itemType = taskCount > 0 ? 'Tasks' : 'todos';
+      let reason = `[ECOMODE #${newCount}] Mode active - continue working.`;
+      if (totalIncomplete > 0) {
+        const itemType = taskCount > 0 ? 'Tasks' : 'todos';
+        reason = `[ECOMODE #${newCount}] ${totalIncomplete} incomplete ${itemType}. Continue working.`;
+      }
+
       console.log(JSON.stringify({
         continue: false,
-        reason: `[ECOMODE #${newCount}] ${totalIncomplete} incomplete ${itemType}. Continue working.`
+        reason
       }));
       return;
     }
