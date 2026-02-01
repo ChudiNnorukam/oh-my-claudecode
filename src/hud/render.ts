@@ -5,6 +5,7 @@
  */
 
 import type { HudRenderContext, HudConfig } from './types.js';
+import { DEFAULT_HUD_CONFIG } from './types.js';
 import { bold, dim } from './colors.js';
 import { renderRalph } from './elements/ralph.js';
 import { renderAgentsByFormat, renderAgentsMultiLine } from './elements/agents.js';
@@ -27,6 +28,23 @@ import {
   renderCacheEfficiency
 } from './analytics-display.js';
 import type { SessionHealth, HudElementConfig } from './types.js';
+
+/**
+ * Limit output lines to prevent input field shrinkage (Issue #222).
+ * Trims lines from the end while preserving the first (header) line.
+ *
+ * @param lines - Array of output lines
+ * @param maxLines - Maximum number of lines to output (uses DEFAULT_HUD_CONFIG if not specified)
+ * @returns Trimmed array of lines
+ */
+export function limitOutputLines(lines: string[], maxLines?: number): string[] {
+  const limit = Math.max(1, maxLines ?? DEFAULT_HUD_CONFIG.elements.maxOutputLines);
+  if (lines.length <= limit) {
+    return lines;
+  }
+  const truncatedCount = lines.length - limit + 1;
+  return [...lines.slice(0, limit - 1), `... (+${truncatedCount} lines)`];
+}
 
 /**
  * Render session health analytics respecting config toggles.
@@ -106,7 +124,7 @@ export async function render(context: HudRenderContext, config: HudConfig): Prom
       if (todos) lines.push(todos);
     }
 
-    return lines.join('\n');
+    return limitOutputLines(lines, config.elements.maxOutputLines).join('\n');
   }
 
   // [OMC] label
@@ -240,10 +258,5 @@ export async function render(context: HudRenderContext, config: HudConfig): Prom
     }
   }
 
-  // If we have detail lines, output multi-line
-  if (detailLines.length > 0) {
-    return [headerLine, ...detailLines].join('\n');
-  }
-
-  return headerLine;
+  return limitOutputLines([headerLine, ...detailLines], config.elements.maxOutputLines).join('\n');
 }

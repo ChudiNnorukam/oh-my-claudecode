@@ -246,7 +246,7 @@ HUD config is stored at: `~/.claude/.omc/hud-config.json`
 
 ## Manual Configuration
 
-You can manually edit the config file:
+You can manually edit the config file. Each option can be set individually - any unset values will use defaults.
 
 ```json
 {
@@ -262,7 +262,8 @@ You can manually edit the config file:
     "backgroundTasks": true,
     "todos": true,
     "showCache": true,
-    "showCost": true
+    "showCost": true,
+    "maxOutputLines": 4
   },
   "thresholds": {
     "contextWarning": 70,
