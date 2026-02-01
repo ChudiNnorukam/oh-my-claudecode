@@ -12,12 +12,50 @@ import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 
 import { join } from 'path';
 import { homedir } from 'os';
 
-async function readStdin() {
-  const chunks = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks).toString('utf-8');
+// Read all stdin with timeout to prevent indefinite hang on Linux
+// See: https://github.com/Yeachan-Heo/oh-my-claudecode/issues/240
+async function readStdin(timeoutMs = 5000) {
+  return new Promise((resolve) => {
+    const chunks = [];
+    let settled = false;
+
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        process.stdin.removeAllListeners();
+        process.stdin.destroy();
+        resolve(Buffer.concat(chunks).toString('utf-8'));
+      }
+    }, timeoutMs);
+
+    process.stdin.on('data', (chunk) => {
+      chunks.push(chunk);
+    });
+
+    process.stdin.on('end', () => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timeout);
+        resolve(Buffer.concat(chunks).toString('utf-8'));
+      }
+    });
+
+    process.stdin.on('error', () => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timeout);
+        resolve('');
+      }
+    });
+
+    if (process.stdin.readableEnded) {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timeout);
+        resolve(Buffer.concat(chunks).toString('utf-8'));
+      }
+    }
+  });
 }
 
 function readJsonFile(path) {
