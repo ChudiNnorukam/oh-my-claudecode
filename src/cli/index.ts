@@ -54,6 +54,11 @@ import {
   waitDetectCommand
 } from './commands/wait.js';
 import { doctorConflictsCommand } from './commands/doctor-conflicts.js';
+import {
+  teleportCommand,
+  teleportListCommand,
+  teleportRemoveCommand
+} from './commands/teleport.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -843,6 +848,70 @@ waitCmd
       json: options.json,
       lines: parseInt(options.lines),
     });
+  });
+
+/**
+ * Teleport command - Quick worktree creation
+ *
+ * Usage:
+ * - `omc teleport #123` - Create worktree for issue/PR #123
+ * - `omc teleport my-feature` - Create worktree for feature branch
+ * - `omc teleport list` - List existing worktrees
+ * - `omc teleport remove <path>` - Remove a worktree
+ */
+const teleportCmd = program
+  .command('teleport [ref]')
+  .description('Create git worktree for isolated development (e.g., omc teleport #123)')
+  .option('--worktree', 'Create worktree (default behavior, flag kept for compatibility)')
+  .option('--path <path>', 'Custom worktree path (default: ~/Workspace/omc-worktrees/)')
+  .option('--base <branch>', 'Base branch to create from (default: main)')
+  .option('--json', 'Output as JSON')
+  .action(async (ref: string | undefined, options) => {
+    if (!ref) {
+      // No ref provided, show help
+      console.log(chalk.blue('Teleport - Quick worktree creation\n'));
+      console.log('Usage:');
+      console.log('  omc teleport <ref>           Create worktree for issue/PR/feature');
+      console.log('  omc teleport list            List existing worktrees');
+      console.log('  omc teleport remove <path>   Remove a worktree');
+      console.log('');
+      console.log('Reference formats:');
+      console.log('  #123                         Issue/PR in current repo');
+      console.log('  owner/repo#123               Issue/PR in specific repo');
+      console.log('  my-feature                   Feature branch name');
+      console.log('  https://github.com/...       GitHub URL');
+      console.log('');
+      console.log('Examples:');
+      console.log('  omc teleport #42             Create worktree for issue #42');
+      console.log('  omc teleport add-auth        Create worktree for feature "add-auth"');
+      console.log('');
+      return;
+    }
+
+    await teleportCommand(ref, {
+      worktree: true, // Always create worktree
+      worktreePath: options.path,
+      base: options.base,
+      json: options.json,
+    });
+  });
+
+teleportCmd
+  .command('list')
+  .description('List existing worktrees in ~/Workspace/omc-worktrees/')
+  .option('--json', 'Output as JSON')
+  .action(async (options) => {
+    await teleportListCommand(options);
+  });
+
+teleportCmd
+  .command('remove <path>')
+  .alias('rm')
+  .description('Remove a worktree')
+  .option('--force', 'Force removal even with uncommitted changes')
+  .option('--json', 'Output as JSON')
+  .action(async (path: string, options) => {
+    await teleportRemoveCommand(path, options);
   });
 
 /**
